@@ -1,0 +1,3325 @@
+<!DOCTYPE html>
+<html lang="es-MX" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CINEHIT — Juego Cronológico de Películas QR</title>
+
+  <!-- Google Fonts: Bebas Neue (Titulares y Años) + Plus Jakarta Sans (Lectura UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            noir: '#0A0C12',
+            graphite: '#141824',
+            graphiteLight: '#1C2233',
+            gold: '#F5B731',
+            goldSoft: '#FCD475',
+            crimson: '#E11D48',
+            ivory: '#F8F5EE',
+          },
+          fontFamily: {
+            display: ['"Bebas Neue"', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            goldGlow: '0 0 30px -5px rgba(245, 183, 49, 0.28)',
+            crimsonGlow: '0 0 28px -5px rgba(225, 29, 72, 0.35)',
+            cinemaCard: '0 20px 50px -15px rgba(0, 0, 0, 0.75)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Librería QR Generator (ligera, síncrona y confiable para pantalla e impresión) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+  <!-- Librería HTML5 QR Code Scanner para cámara móvil -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    /* =====================================================================
+       ESTILOS PERSONALIZADOS — ESTÉTICA CINEMA NOIR & GOLD
+    ===================================================================== */
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      background-color: #0A0C12;
+      color: #F8F5EE;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background-image:
+        radial-gradient(ellipse 80% 45% at 50% -10%, rgba(245, 183, 49, 0.10), transparent 65%),
+        radial-gradient(ellipse 55% 40% at 95% 20%, rgba(225, 29, 72, 0.06), transparent 60%);
+      background-attachment: fixed;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar sutil cinematográfica */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0A0C12; }
+    ::-webkit-scrollbar-thumb { background: #262E45; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #F5B731; }
+
+    /* Efecto Flip 3D para revelación de tarjetas y vista previa de impresión */
+    .perspective-1200 {
+      perspective: 1200px;
+    }
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .flip-card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .flip-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .flip-face-back {
+      transform: rotateY(180deg);
+    }
+
+    /* =====================================================================
+       ESCUDO ANTI-SPOILER DE YOUTUBE (LETTERBOX CINEMATOGRÁFICO)
+       Cubre con barras sólidas de 68px arriba y 52px abajo + escudo táctil
+    ===================================================================== */
+    .cinema-viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 280px;
+      background: #040508;
+      overflow: hidden;
+      border-radius: 1rem;
+      border: 1px solid rgba(245, 183, 49, 0.22);
+      box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.85);
+    }
+    .cinema-iframe-wrap {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .cinema-iframe-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      pointer-events: none;
+    }
+    .letterbox-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 68px;
+      background: linear-gradient(180deg, #050609 82%, rgba(5, 6, 9, 0.96) 100%);
+      z-index: 25;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      border-bottom: 1px solid rgba(245, 183, 49, 0.14);
+    }
+    .letterbox-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: linear-gradient(0deg, #050609 82%, rgba(5, 6, 9, 0.96) 100%);
+      z-index: 25;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      border-top: 1px solid rgba(245, 183, 49, 0.14);
+    }
+    .anti-spoiler-shield {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      background: transparent;
+      cursor: default;
+      user-select: none;
+    }
+
+    /* Visualizador animado para Modo Cinéfilo (Solo Audio) */
+    @keyframes spinReel {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .reel-spin {
+      animation: spinReel 5.5s linear infinite;
+    }
+    .reel-paused {
+      animation-play-state: paused;
+    }
+    @keyframes eqPulse {
+      0%, 100% { transform: scaleY(0.22); }
+      50% { transform: scaleY(1); }
+    }
+    .eq-bar {
+      transform-origin: bottom;
+      animation: eqPulse 0.85s ease-in-out infinite;
+    }
+    .eq-paused .eq-bar {
+      animation-play-state: paused;
+      transform: scaleY(0.2);
+    }
+
+    /* Patrón sutil de perforación de película */
+    .film-border {
+      background-image: repeating-linear-gradient(
+        90deg,
+        rgba(245, 183, 49, 0.25) 0px,
+        rgba(245, 183, 49, 0.25) 10px,
+        transparent 10px,
+        transparent 22px
+      );
+      height: 4px;
+    }
+
+    /* QR SVG siempre nítido */
+    .qr-svg-box svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      shape-rendering: crispEdges;
+    }
+
+    /* =====================================================================
+       ESTILOS DE IMPRESIÓN PROFESIONAL (@media print) — DOBLE CARA 3×3
+    ===================================================================== */
+    #print-sheet-container {
+      display: none;
+    }
+
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 8mm;
+      }
+      html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #app-shell,
+      #toast-container,
+      #modal-backdrop {
+        display: none !important;
+      }
+      #print-sheet-container {
+        display: block !important;
+        width: 100%;
+      }
+      .print-page {
+        page-break-after: always;
+        break-after: page;
+        width: 100%;
+        padding-top: 2mm;
+      }
+      .print-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      .print-page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 8pt;
+        color: #555;
+        margin-bottom: 4mm;
+        padding-bottom: 1.5mm;
+        border-bottom: 0.3mm dashed #ccc;
+      }
+      .print-grid {
+        display: grid;
+        grid-template-columns: repeat(3, auto);
+        justify-content: center;
+        gap: 0mm;
+      }
+      .print-card-cell {
+        position: relative;
+        box-sizing: border-box;
+        border: 0.2mm dashed rgba(130, 130, 130, 0.55);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .print-card-cell.size-square {
+        width: 65mm;
+        height: 65mm;
+      }
+      .print-card-cell.size-poker {
+        width: 63mm;
+        height: 88mm;
+      }
+      .print-card-cell.is-empty {
+        border: 0.15mm dashed rgba(200, 200, 200, 0.3);
+        background: transparent !important;
+      }
+      /* Marcas de corte en esquinas */
+      .crop-mark {
+        position: absolute;
+        width: 3mm;
+        height: 3mm;
+        pointer-events: none;
+        z-index: 5;
+      }
+      .crop-tl { top: 0; left: 0; border-top: 0.35mm solid #999; border-left: 0.35mm solid #999; }
+      .crop-tr { top: 0; right: 0; border-top: 0.35mm solid #999; border-right: 0.35mm solid #999; }
+      .crop-bl { bottom: 0; left: 0; border-bottom: 0.35mm solid #999; border-left: 0.35mm solid #999; }
+      .crop-br { bottom: 0; right: 0; border-bottom: 0.35mm solid #999; border-right: 0.35mm solid #999; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-gold selection:text-noir">
+
+  <!-- =======================================================================
+       CONTENEDOR PRINCIPAL DE LA APLICACIÓN (OCULTO AL IMPRIMIR)
+  ======================================================================== -->
+  <div id="app-shell" class="min-h-screen flex flex-col">
+
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <header class="sticky top-0 z-40 bg-noir/90 backdrop-blur-xl border-b border-gold/15">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
+          <!-- Marca CINEHIT -->
+          <div class="flex items-center justify-between">
+            <button onclick="switchTab('player')" class="flex items-center gap-3 group text-left focus:outline-none">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gold via-amber-400 to-amber-600 text-noir flex items-center justify-center shadow-goldGlow group-hover:scale-105 transition">
+                <!-- Claqueta SVG -->
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8H4Z"/>
+                  <path d="m4 11-.88-2.87a2 2 0 0 1 1.33-2.5l11.48-3.5a2 2 0 0 1 2.5 1.32l.87 2.87L4 11Z"/>
+                  <path d="m6.6 4.99 3.38 4.2"/>
+                  <path d="m11.86 3.38 3.38 4.2"/>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-2">
+                  <span class="font-display text-3xl tracking-wider text-ivory leading-none">CINE<span class="text-gold">HIT</span></span>
+                  <span class="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/25">PRO</span>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-tight hidden sm:block">Juego cronológico de películas QR sin spoilers</p>
+              </div>
+            </button>
+
+            <!-- Indicador de estado compacto en móvil -->
+            <div class="flex md:hidden items-center gap-2">
+              <span id="mobile-clips-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-graphite border border-gold/20 text-goldSoft">100/100 clips</span>
+            </div>
+          </div>
+
+          <!-- 4 Pestañas Principales -->
+          <nav class="grid grid-cols-2 sm:flex sm:items-center gap-1.5 bg-graphite/80 p-1.5 rounded-2xl border border-white/10" role="tablist">
+            <button data-tab="player" onclick="switchTab('player')" class="tab-btn flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Reproductor</span>
+            </button>
+            <button data-tab="deck" onclick="switchTab('deck')" class="tab-btn flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
+              <span>Gestor de Mazo</span>
+            </button>
+            <button data-tab="print" onclick="switchTab('print')" class="tab-btn flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <span>Imprimir QR</span>
+            </button>
+            <button data-tab="table" onclick="switchTab('table')" class="tab-btn flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Mesa y Reglas</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL POR PESTAÑA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-5 sm:py-8">
+
+      <!-- ===================================================================
+           MÓDULO 1: REPRODUCTOR SIN SPOILERS (MODO JUEGO Y ESCÁNER QR)
+      ==================================================================== -->
+      <section id="tab-player" class="tab-panel space-y-6">
+
+        <!-- Barra de Acceso Rápido a Tarjetas -->
+        <div class="bg-graphite rounded-2xl border border-gold/15 p-4 sm:p-5 shadow-cinemaCard">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+
+            <!-- Controles de Carga: Escáner QR + ID manual -->
+            <div class="flex flex-wrap items-center gap-2.5">
+              <button onclick="openQrScanner()" class="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold to-amber-500 text-noir font-bold text-sm shadow-goldGlow hover:brightness-110 active:scale-[0.98] transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3h-1M14 20h6v-1"/></svg>
+                <span>Escanear QR</span>
+              </button>
+
+              <div class="flex items-center bg-noir rounded-xl border border-white/10 p-1 focus-within:border-gold/60 transition">
+                <span class="pl-2.5 pr-1 text-xs font-bold text-slate-400">#</span>
+                <input id="quick-card-id" type="text" inputmode="numeric" maxlength="4" placeholder="016" class="w-16 sm:w-20 bg-transparent text-ivory font-display text-xl tracking-wider focus:outline-none py-1.5" onkeydown="if(event.key==='Enter') loadCardByInput()" />
+                <button onclick="loadCardByInput()" class="px-3.5 py-2 rounded-lg bg-graphiteLight hover:bg-gold hover:text-noir text-ivory text-xs font-bold transition">
+                  Cargar
+                </button>
+              </div>
+            </div>
+
+            <!-- Controles de Mazo Aleatorio -->
+            <div class="flex flex-wrap items-center gap-2.5">
+              <button onclick="drawRandomCard()" class="flex items-center gap-2 px-4 py-3 rounded-xl bg-crimson/90 hover:bg-crimson text-white font-bold text-sm shadow-crimsonGlow active:scale-[0.98] transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                <span>Tarjeta Aleatoria</span>
+              </button>
+
+              <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-noir/80 border border-white/10 text-xs">
+                <span id="deck-remaining-label" class="text-slate-300 font-medium">Mazo: 100/100</span>
+                <button onclick="resetSessionDeck()" title="Barajar de nuevo" class="text-gold hover:text-goldSoft font-bold underline underline-offset-2 ml-1">
+                  Barajar
+                </button>
+              </div>
+
+              <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-noir/60 border border-white/10 text-xs text-slate-300 cursor-pointer select-none">
+                <input id="random-only-linked" type="checkbox" onchange="updateSessionDeckStats()" class="rounded border-slate-600 text-gold focus:ring-gold bg-noir" />
+                <span>Solo con clip listo</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Escenario Principal: Pantalla de Proyección + Tarjeta 3D -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          <!-- COLUMNA IZQUIERDA (7 cols): REPRODUCTOR ANTI-SPOILER -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="bg-graphite rounded-2xl border border-gold/15 p-3.5 sm:p-5 shadow-cinemaCard space-y-4">
+
+              <!-- Encabezado del Proyector -->
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <span id="stage-card-badge" class="font-display text-2xl tracking-wider px-3 py-0.5 rounded-lg bg-gold/15 text-gold border border-gold/30">
+                    TARJETA #---
+                  </span>
+                  <span id="stage-status-pill" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-white/10">
+                    En espera
+                  </span>
+                </div>
+
+                <!-- Selector de Modo: Taquilla (Video) vs Cinéfilo (Solo Audio) -->
+                <div class="flex items-center bg-noir p-1 rounded-xl border border-white/10">
+                  <button id="mode-taquilla-btn" onclick="setPlayMode('taquilla')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-gold text-noir">
+                    🎬 Taquilla
+                  </button>
+                  <button id="mode-cinefilo-btn" onclick="setPlayMode('cinefilo')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-ivory">
+                    🎧 Cinéfilo (Audio)
+                  </button>
+                </div>
+              </div>
+
+              <!-- PANTALLA CINEMATOGRÁFICA CON ESCUDO FÍSICO ANTI-SPOILER -->
+              <div class="cinema-viewport" id="cinema-viewport">
+
+                <!-- 1. Contenedor de YouTube IFrame API (siempre en DOM para estabilidad) -->
+                <div id="yt-stage-layer" class="cinema-iframe-wrap hidden">
+                  <div id="yt-player-mount"></div>
+                </div>
+
+                <!-- 2. Escudo transparente que bloquea clics y hover sobre el iframe -->
+                <div id="anti-spoiler-shield" class="anti-spoiler-shield hidden"></div>
+
+                <!-- 3. Barras Letterbox Físicas Anti-Spoiler (68px arriba / 52px abajo) -->
+                <div id="letterbox-top" class="letterbox-top hidden">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-crimson animate-pulse"></span>
+                    <span class="font-display text-lg tracking-widest text-gold">SALA CINEHIT</span>
+                  </div>
+                  <span class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">Escudo Anti-Spoiler Activo</span>
+                </div>
+
+                <div id="letterbox-bottom" class="letterbox-bottom hidden">
+                  <span id="letterbox-time-readout" class="font-mono text-xs text-goldSoft font-semibold">00:00 / 00:30</span>
+                  <span class="text-[11px] text-slate-400">Ubica esta película en tu línea de tiempo</span>
+                </div>
+
+                <!-- 4. Capa Modo Cinéfilo (Solo Audio) con visualizador de carrete -->
+                <div id="audio-only-overlay" class="hidden absolute inset-0 z-30 bg-gradient-to-br from-[#0B0E18] via-[#101524] to-[#08090F] flex flex-col items-center justify-center p-6 text-center">
+                  <div id="cinema-reel-icon" class="w-24 h-24 rounded-full border-4 border-gold/60 bg-noir flex items-center justify-center shadow-goldGlow mb-4 reel-spin reel-paused">
+                    <svg class="w-16 h-16 text-gold" viewBox="0 0 64 64" fill="none">
+                      <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2.5"/>
+                      <circle cx="32" cy="32" r="7" fill="currentColor"/>
+                      <circle cx="32" cy="14" r="5" fill="#141824" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="32" cy="50" r="5" fill="#141824" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="14" cy="32" r="5" fill="#141824" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="50" cy="32" r="5" fill="#141824" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </div>
+                  <p class="font-display text-2xl tracking-wider text-gold">MODO CINÉFILO — SOLO AUDIO</p>
+                  <p class="text-xs text-slate-400 mt-1 max-w-xs">Escucha los diálogos, efectos y banda sonora sin ver la imagen.</p>
+                  <!-- Ecualizador animado -->
+                  <div id="audio-eq" class="flex items-end justify-center gap-1.5 h-10 mt-5 eq-paused">
+                    <span class="eq-bar w-1.5 h-8 bg-gold rounded-full" style="animation-delay: 0.05s"></span>
+                    <span class="eq-bar w-1.5 h-10 bg-crimson rounded-full" style="animation-delay: 0.20s"></span>
+                    <span class="eq-bar w-1.5 h-7 bg-gold rounded-full" style="animation-delay: 0.35s"></span>
+                    <span class="eq-bar w-1.5 h-9 bg-goldSoft rounded-full" style="animation-delay: 0.12s"></span>
+                    <span class="eq-bar w-1.5 h-6 bg-crimson rounded-full" style="animation-delay: 0.42s"></span>
+                    <span class="eq-bar w-1.5 h-10 bg-gold rounded-full" style="animation-delay: 0.27s"></span>
+                    <span class="eq-bar w-1.5 h-8 bg-goldSoft rounded-full" style="animation-delay: 0.15s"></span>
+                  </div>
+                </div>
+
+                <!-- 5. Capa Estado Inicial (sin tarjeta seleccionada) -->
+                <div id="empty-stage-overlay" class="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-noir via-[#0F1320] to-noir">
+                  <div class="w-16 h-16 rounded-2xl bg-gold/10 border border-gold/30 text-gold flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+                  </div>
+                  <h2 class="font-display text-3xl sm:text-4xl tracking-wider text-ivory">LISTO PARA PROYECTAR</h2>
+                  <p class="text-sm text-slate-400 max-w-md mt-2">
+                    Escanea el código QR de una tarjeta física, escribe un número de tarjeta o saca una <strong class="text-gold">Tarjeta Aleatoria</strong> para iniciar la ronda.
+                  </p>
+                  <button onclick="drawRandomCard()" class="mt-5 px-5 py-2.5 rounded-xl bg-gold text-noir font-bold text-sm hover:brightness-110 transition">
+                    Sacar primera tarjeta
+                  </button>
+                </div>
+
+                <!-- 6. Capa Tarjeta sin Enlace de YouTube (Vinculación Rápida + Modo Pista) -->
+                <div id="no-clip-overlay" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-4 sm:p-6 text-center bg-gradient-to-b from-[#111625] to-[#090B11] overflow-y-auto">
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/15 text-gold border border-gold/30 mb-2">
+                    Clip pendiente de vincular
+                  </span>
+                  <h3 class="font-display text-2xl sm:text-3xl tracking-wide text-ivory">ESTA TARJETA AÚN NO TIENE VIDEO</h3>
+                  <p class="text-xs sm:text-sm text-slate-400 max-w-md mt-1">
+                    El <strong class="text-ivory">Proyeccionista</strong> puede vincular un clip de YouTube en 5 segundos, o pueden jugar ahora mismo con el <strong class="text-gold">Modo Pista</strong>.
+                  </p>
+
+                  <!-- Pegar enlace al instante -->
+                  <div class="w-full max-w-md mt-4 flex flex-col sm:flex-row gap-2">
+                    <input id="inline-yt-url" type="text" placeholder="Pega aquí el enlace o ID de YouTube..." class="flex-1 px-3 py-2.5 rounded-xl bg-noir border border-white/15 text-xs sm:text-sm text-ivory placeholder-slate-500 focus:outline-none focus:border-gold" />
+                    <button onclick="linkInlineYoutube()" class="px-4 py-2.5 rounded-xl bg-gold text-noir font-bold text-xs sm:text-sm hover:brightness-110 transition shrink-0">
+                      Vincular y Reproducir
+                    </button>
+                  </div>
+
+                  <!-- Botones secundarios: Buscar escena / Modo Pista -->
+                  <div class="flex flex-wrap items-center justify-center gap-2 mt-3.5">
+                    <button onclick="searchCurrentCardOnYoutube()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-crimson/20 hover:bg-crimson/30 text-rose-200 border border-crimson/40 text-xs font-semibold transition">
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+                      <span>Buscar en YouTube (Proyeccionista)</span>
+                    </button>
+                    <button onclick="activateClueMode()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-graphiteLight hover:bg-slate-700 text-goldSoft border border-gold/30 text-xs font-bold transition">
+                      <span>💡 Activar Modo Pista (sin video)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 7. Capa Modo Pista (Sin Video, sin revelar título ni año) -->
+                <div id="clue-mode-overlay" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-[#121728] via-[#0C101B] to-[#080A10]">
+                  <span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-gold/15 text-gold border border-gold/30 mb-3">
+                    💡 MODO PISTA — SIN SPOILERS
+                  </span>
+                  <p class="text-xs uppercase tracking-widest text-slate-400">Escena Icónica de la Tarjeta</p>
+                  <blockquote id="clue-scene-text" class="mt-3 text-lg sm:text-2xl font-bold text-ivory max-w-lg leading-snug">
+                    "..."
+                  </blockquote>
+                  <div class="mt-4 flex items-center gap-2 text-xs text-slate-400">
+                    <span id="clue-genre-pill" class="px-3 py-1 rounded-lg bg-noir border border-white/10 text-goldSoft font-semibold">Género</span>
+                  </div>
+                  <button onclick="exitClueMode()" class="mt-5 text-xs text-slate-400 hover:text-ivory underline underline-offset-4">
+                    Volver a vincular video de YouTube
+                  </button>
+                </div>
+
+                <!-- 8. Capa de Error de Incrustación (YouTube 101 / 150 / Borrado) -->
+                <div id="embed-error-overlay" class="hidden absolute inset-0 z-35 flex flex-col items-center justify-center p-6 text-center bg-noir/95 backdrop-blur-md">
+                  <div class="w-12 h-12 rounded-full bg-crimson/20 border border-crimson/50 text-crimson flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  </div>
+                  <h3 class="font-display text-2xl tracking-wider text-rose-300">BLOQUEO DE INCRUSTACIÓN EN YOUTUBE</h3>
+                  <p id="embed-error-msg" class="text-xs sm:text-sm text-slate-300 max-w-md mt-1.5">
+                    El dueño de este video desactivó la reproducción externa (Error 150/101) o el clip fue retirado.
+                  </p>
+                  <div class="flex flex-wrap items-center justify-center gap-2.5 mt-4">
+                    <button onclick="editCurrentCardInDeck()" class="px-4 py-2.5 rounded-xl bg-gold text-noir font-bold text-xs hover:brightness-110 transition">
+                      Cambiar enlace en Gestor (10s)
+                    </button>
+                    <button onclick="openCurrentVideoExternally()" class="px-4 py-2.5 rounded-xl bg-graphiteLight border border-white/15 text-ivory text-xs font-semibold hover:bg-slate-700 transition">
+                      Abrir en YouTube (Oculta la pantalla)
+                    </button>
+                    <button onclick="activateClueMode()" class="px-3.5 py-2.5 rounded-xl bg-noir border border-gold/30 text-goldSoft text-xs font-semibold">
+                      Usar Modo Pista
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Barra de Progreso Personalizada + Controles del Reproductor -->
+              <div id="custom-player-controls" class="space-y-3 opacity-50 pointer-events-none transition-opacity">
+                <!-- Barra de progreso -->
+                <div class="space-y-1.5">
+                  <div class="w-full h-2.5 bg-noir rounded-full overflow-hidden border border-white/10">
+                    <div id="clip-progress-bar" class="h-full w-0 bg-gradient-to-r from-gold to-crimson rounded-full transition-all duration-200"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                    <span id="clip-elapsed-label">00:00</span>
+                    <span id="clip-range-label" class="text-slate-500">Fragmento: 0s – 30s</span>
+                    <span id="clip-duration-label">00:30</span>
+                  </div>
+                </div>
+
+                <!-- Botonera táctil -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <button id="btn-play-pause" onclick="togglePlayPause()" class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-noir font-bold text-sm shadow-goldGlow hover:brightness-110 active:scale-[0.98] transition">
+                      <svg id="icon-play" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      <svg id="icon-pause" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                      <span id="label-play-pause">Reproducir</span>
+                    </button>
+                    <button onclick="restartClip()" class="flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-noir hover:bg-graphiteLight border border-white/10 text-ivory text-xs font-semibold transition" title="Reiniciar fragmento">
+                      <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                      <span>Reiniciar</span>
+                    </button>
+                  </div>
+
+                  <button id="btn-mute" onclick="toggleMute()" class="flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-noir hover:bg-graphiteLight border border-white/10 text-slate-300 text-xs font-semibold transition">
+                    <svg id="icon-vol-on" class="w-4 h-4 text-gold" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    <svg id="icon-vol-off" class="w-4 h-4 text-crimson hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                    <span id="label-mute">Sonido</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA (5 cols): TARJETA DE REVELACIÓN 3D -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="perspective-1200 w-full h-[390px] sm:h-[420px]">
+              <div id="reveal-card-inner" class="flip-card-inner">
+
+                <!-- CARA FRONTAL (OCULTA / MISTERIO) -->
+                <div class="flip-face rounded-2xl bg-gradient-to-b from-graphite via-[#121623] to-noir border border-gold/30 shadow-cinemaCard flex flex-col justify-between p-6 overflow-hidden">
+                  <div class="film-border w-full opacity-70 rounded-full"></div>
+
+                  <div class="flex flex-col items-center text-center my-auto py-4">
+                    <div class="w-20 h-20 rounded-2xl bg-gold/10 border border-gold/35 flex items-center justify-center text-gold mb-4 shadow-goldGlow">
+                      <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-[0.22em] text-gold">TARJETA EN JUEGO</p>
+                    <h3 id="mystery-card-id" class="font-display text-6xl tracking-widest text-ivory mt-1">#---</h3>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-3 max-w-xs leading-relaxed">
+                      Coloca tu tarjeta en la línea de tiempo y di el <strong class="text-ivory">título + director o protagonista</strong> para ganar un Boleto antes de revelar.
+                    </p>
+                  </div>
+
+                  <div class="film-border w-full opacity-70 rounded-full"></div>
+                </div>
+
+                <!-- CARA TRASERA (RESPUESTA REVELADA) -->
+                <div class="flip-face flip-face-back rounded-2xl bg-gradient-to-br from-[#1B1E2E] via-graphite to-[#0E1019] border-2 border-gold shadow-goldGlow flex flex-col justify-between p-6 overflow-hidden">
+                  <div class="flex items-center justify-between gap-2">
+                    <span id="reveal-card-id" class="font-mono text-xs font-bold text-gold/90 px-2.5 py-1 rounded-lg bg-noir/70 border border-gold/25">#016</span>
+                    <span id="reveal-genre" class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-crimson/20 text-rose-200 border border-crimson/35">Aventura</span>
+                  </div>
+
+                  <div class="text-center my-auto py-2">
+                    <p id="reveal-title" class="text-xl sm:text-2xl font-extrabold text-ivory leading-tight px-2">Parque Jurásico</p>
+                    <div id="reveal-year" class="font-display text-[84px] sm:text-[96px] leading-none text-transparent bg-clip-text bg-gradient-to-b from-goldSoft via-gold to-amber-600 drop-shadow mt-1">
+                      1993
+                    </div>
+                  </div>
+
+                  <div class="space-y-2.5 pt-3 border-t border-gold/20 text-xs sm:text-sm">
+                    <div class="grid grid-cols-2 gap-2">
+                      <div class="bg-noir/60 rounded-xl p-2.5 border border-white/5">
+                        <span class="block text-[10px] uppercase tracking-wider text-slate-400">Director</span>
+                        <span id="reveal-director" class="font-bold text-ivory line-clamp-1">Steven Spielberg</span>
+                      </div>
+                      <div class="bg-noir/60 rounded-xl p-2.5 border border-white/5">
+                        <span class="block text-[10px] uppercase tracking-wider text-slate-400">Protagonista</span>
+                        <span id="reveal-lead" class="font-bold text-ivory line-clamp-1">Sam Neill</span>
+                      </div>
+                    </div>
+                    <div class="bg-noir/60 rounded-xl p-2.5 border border-gold/15">
+                      <span class="block text-[10px] uppercase tracking-wider text-gold">Escena Icónica</span>
+                      <span id="reveal-scene" class="text-slate-200 text-xs leading-snug line-clamp-2">El vaso de agua vibrando y el escape del T-Rex</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Botón Dorado Prominente: REVELAR RESPUESTA -->
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <button id="btn-reveal-answer" onclick="toggleRevealCard()" disabled class="flex-1 py-4 px-5 rounded-2xl bg-gradient-to-r from-gold via-amber-400 to-amber-500 text-noir font-extrabold text-base tracking-wide shadow-goldGlow hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span id="label-reveal-btn">Revelar Respuesta</span>
+              </button>
+
+              <button onclick="drawRandomCard()" class="py-4 px-4 rounded-2xl bg-graphite hover:bg-graphiteLight border border-white/15 text-ivory font-bold text-sm transition flex items-center justify-center gap-1.5" title="Siguiente tarjeta aleatoria">
+                <span>Siguiente</span>
+                <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ===================================================================
+           MÓDULO 2: GESTOR DE MAZO Y ARQUITECTURA ANTI-COPYRIGHT
+      ==================================================================== -->
+      <section id="tab-deck" class="tab-panel hidden space-y-6">
+
+        <!-- Cabecera + KPIs del Mazo -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="bg-graphite rounded-2xl border border-white/10 p-4">
+            <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Películas</span>
+            <p id="kpi-total" class="font-display text-4xl text-ivory mt-1">100</p>
+          </div>
+          <div class="bg-graphite rounded-2xl border border-emerald-500/25 p-4">
+            <span class="text-xs text-emerald-400 font-semibold uppercase tracking-wider">Clips Listos</span>
+            <p id="kpi-linked" class="font-display text-4xl text-emerald-400 mt-1">0</p>
+          </div>
+          <div class="bg-graphite rounded-2xl border border-gold/25 p-4">
+            <span class="text-xs text-gold font-semibold uppercase tracking-wider">Sin Clip</span>
+            <p id="kpi-pending" class="font-display text-4xl text-gold mt-1">0</p>
+          </div>
+          <div class="bg-graphite rounded-2xl border border-crimson/25 p-4 flex flex-col justify-between">
+            <span class="text-xs text-rose-300 font-semibold uppercase tracking-wider">Acción Rápida</span>
+            <button onclick="openMovieModal()" class="mt-2 w-full py-2 px-3 rounded-xl bg-gold text-noir font-bold text-xs sm:text-sm hover:brightness-110 transition">
+              + Nueva Película
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel de Sincronización Remota Anti-Copyright (Google Sheets + CSV/JSON) -->
+        <div class="bg-graphite rounded-2xl border border-gold/20 p-4 sm:p-5 space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h2 class="font-display text-2xl tracking-wider text-gold flex items-center gap-2">
+                <span>🛡️ ARQUITECTURA ANTI-COPYRIGHT (GOOGLE SHEETS EN VIVO)</span>
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl">
+                Tus tarjetas impresas apuntan al <strong>ID de carta</strong> (<code class="text-goldSoft bg-noir px-1.5 py-0.5 rounded">?card=016</code>), nunca directo a YouTube. Si meses después borran un clip por copyright, solo cambias el enlace en tu Google Sheet publicado y sincronizas aquí — <strong>cero tarjetas reimpresas</strong>.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+              <button onclick="exportDeckCSV()" class="px-3 py-2 rounded-xl bg-noir hover:bg-graphiteLight border border-white/15 text-xs font-bold text-ivory transition">
+                ⬇ Exportar CSV
+              </button>
+              <label class="px-3 py-2 rounded-xl bg-noir hover:bg-graphiteLight border border-white/15 text-xs font-bold text-ivory transition cursor-pointer">
+                ⬆ Importar CSV
+                <input type="file" accept=".csv,text/csv" class="hidden" onchange="handleImportCSV(event)" />
+              </label>
+              <button onclick="exportDeckJSON()" class="px-3 py-2 rounded-xl bg-noir hover:bg-graphiteLight border border-white/15 text-xs font-bold text-slate-300 transition">
+                ⬇ JSON
+              </button>
+              <label class="px-3 py-2 rounded-xl bg-noir hover:bg-graphiteLight border border-white/15 text-xs font-bold text-slate-300 transition cursor-pointer">
+                ⬆ JSON
+                <input type="file" accept=".json,application/json" class="hidden" onchange="handleImportJSON(event)" />
+              </label>
+              <button onclick="verifyAllClips()" class="px-3 py-2 rounded-xl bg-noir hover:bg-graphiteLight border border-emerald-500/40 text-xs font-bold text-emerald-300 transition">
+                🩺 Verificar clips
+              </button>
+              <button onclick="confirmResetBaseDeck()" class="px-3 py-2 rounded-xl bg-crimson/15 hover:bg-crimson/25 border border-crimson/35 text-xs font-bold text-rose-200 transition">
+                Restaurar 100 base
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2.5 pt-2 border-t border-white/10">
+            <input id="google-sheet-url" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" class="flex-1 px-3.5 py-2.5 rounded-xl bg-noir border border-white/15 text-xs sm:text-sm text-ivory placeholder-slate-500 focus:outline-none focus:border-gold" />
+            <button onclick="syncGoogleSheet()" id="btn-sync-sheet" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-amber-500 text-noir font-bold text-xs sm:text-sm hover:brightness-110 transition shrink-0">
+              🔄 Sincronizar Google Sheet
+            </button>
+          </div>
+          <p id="sheet-sync-status" class="text-[11px] text-slate-400">
+            Tip: Exporta tu CSV aquí, súbelo a Google Sheets, ve a <em>Archivo → Compartir → Publicar en la web → Formato CSV</em> y pega el enlace arriba.
+          </p>
+          <div id="verify-status" class="text-[11px] text-slate-300 leading-relaxed"></div>
+        </div>
+
+        <!-- Filtros del Gestor de Mazo -->
+        <div class="bg-graphite rounded-2xl border border-white/10 p-4 flex flex-col md:flex-row gap-3">
+          <div class="flex-1 relative">
+            <input id="deck-search" type="text" oninput="renderDeckList()" placeholder="Buscar por ID, película, director, actor o escena..." class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-noir border border-white/15 text-sm text-ivory placeholder-slate-500 focus:outline-none focus:border-gold" />
+            <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <select id="deck-filter-decade" onchange="renderDeckList()" class="px-3.5 py-2.5 rounded-xl bg-noir border border-white/15 text-sm text-ivory focus:outline-none focus:border-gold">
+            <option value="all">Todas las décadas</option>
+            <option value="1930-1979">Clásicos (antes de 1980)</option>
+            <option value="1980-1989">Años 80 (1980–1989)</option>
+            <option value="1990-1999">Años 90 (1990–1999)</option>
+            <option value="2000-2009">Años 2000 (2000–2009)</option>
+            <option value="2010-2019">Años 2010 (2010–2019)</option>
+            <option value="2020-2029">Recientes (2020–2025+)</option>
+          </select>
+          <select id="deck-filter-status" onchange="renderDeckList()" class="px-3.5 py-2.5 rounded-xl bg-noir border border-white/15 text-sm text-ivory focus:outline-none focus:border-gold">
+            <option value="all">Todos los estados</option>
+            <option value="linked">✅ Clip listo</option>
+            <option value="missing">⏳ Sin clip</option>
+          </select>
+        </div>
+
+        <!-- Lista Dinámica de Películas -->
+        <div id="deck-list-container" class="space-y-3">
+          <!-- Renderizado dinámicamente por JS -->
+        </div>
+      </section>
+
+
+      <!-- ===================================================================
+           MÓDULO 3: ESTUDIO DE TARJETAS IMPRIMIBLES (QR + PDF DÚPLEX)
+      ==================================================================== -->
+      <section id="tab-print" class="tab-panel hidden space-y-6">
+
+        <!-- Panel de Configuración de Impresión -->
+        <div class="bg-graphite rounded-2xl border border-gold/20 p-4 sm:p-6 shadow-cinemaCard space-y-5">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <h2 class="font-display text-3xl tracking-wider text-ivory">ESTUDIO DE TARJETAS <span class="text-gold">IMPRIMIBLES QR</span></h2>
+              <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Genera un PDF tamaño Carta listo para imprimir a doble cara (3×3 = 9 tarjetas por hoja) con marcas de corte y espejeo automático.</p>
+            </div>
+            <button onclick="generateAndPrintDeck()" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-gold via-amber-400 to-amber-500 text-noir font-extrabold text-sm shadow-goldGlow hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2 shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <span>Imprimir / Guardar PDF (Doble Cara)</span>
+            </button>
+          </div>
+
+          <!-- URL Base del Juego -->
+          <div class="bg-noir/70 rounded-xl p-4 border border-white/10 space-y-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-gold">URL Base de tu juego (destino de los códigos QR)</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input id="print-base-url" type="url" oninput="savePrintSettingsAndRender()" class="flex-1 px-3.5 py-2.5 rounded-xl bg-graphite border border-white/15 text-xs sm:text-sm text-ivory font-mono focus:outline-none focus:border-gold" />
+              <button onclick="copySampleQrUrl()" class="px-4 py-2.5 rounded-xl bg-graphiteLight hover:bg-slate-700 text-xs font-bold text-goldSoft border border-gold/25 transition shrink-0">
+                Copiar ejemplo QR
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Enlace generado para la tarjeta #001: <code id="qr-url-preview" class="text-goldSoft break-all"></code>
+            </p>
+          </div>
+
+          <!-- Opciones de Formato, Tema y Filtro -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Formato -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Formato de Tarjeta</label>
+              <select id="print-format" onchange="savePrintSettingsAndRender()" class="w-full px-3.5 py-2.5 rounded-xl bg-noir border border-white/15 text-sm text-ivory focus:outline-none focus:border-gold">
+                <option value="square">Cuadrada estilo Hitster (6.5 × 6.5 cm)</option>
+                <option value="poker">Tamaño Póker (6.3 × 8.8 cm)</option>
+              </select>
+            </div>
+
+            <!-- Tema visual -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Tema de Impresión</label>
+              <select id="print-theme" onchange="savePrintSettingsAndRender()" class="w-full px-3.5 py-2.5 rounded-xl bg-noir border border-white/15 text-sm text-ivory focus:outline-none focus:border-gold">
+                <option value="gala">Gala Cine (Negro y Oro)</option>
+                <option value="neon">Retro Neón (Índigo y Magenta)</option>
+                <option value="inksave">Ahorro de Tinta (Blanco Elegante)</option>
+              </select>
+            </div>
+
+            <!-- Filtro de tarjetas -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Tarjetas a Incluir</label>
+              <select id="print-filter" onchange="togglePrintRangeInputs(); savePrintSettingsAndRender()" class="w-full px-3.5 py-2.5 rounded-xl bg-noir border border-white/15 text-sm text-ivory focus:outline-none focus:border-gold">
+                <option value="all">Todas las tarjetas</option>
+                <option value="linked">Solo con clip vinculado</option>
+                <option value="range">Rango de IDs (ej. 001 a 018)</option>
+              </select>
+            </div>
+
+            <!-- Rango o Duplex -->
+            <div class="flex flex-col justify-end">
+              <div id="print-range-box" class="hidden flex items-center gap-2 mb-2">
+                <input id="print-range-from" type="number" min="1" value="1" oninput="savePrintSettingsAndRender()" class="w-1/2 px-2.5 py-1.5 rounded-lg bg-noir border border-white/15 text-xs text-ivory" placeholder="Desde" />
+                <span class="text-slate-400 text-xs">a</span>
+                <input id="print-range-to" type="number" min="1" value="18" oninput="savePrintSettingsAndRender()" class="w-1/2 px-2.5 py-1.5 rounded-lg bg-noir border border-white/15 text-xs text-ivory" placeholder="Hasta" />
+              </div>
+              <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-noir border border-gold/25 cursor-pointer select-none">
+                <input id="print-mirror-backs" type="checkbox" checked onchange="savePrintSettingsAndRender()" class="rounded border-slate-600 text-gold focus:ring-gold bg-noir" />
+                <span class="text-xs font-semibold text-ivory leading-tight">Espejear reversos (doble cara borde largo)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs text-slate-400">
+            <span id="print-summary-text">Mostrando 100 tarjetas · 12 hojas frente + 12 hojas reverso (24 páginas total).</span>
+            <span class="text-goldSoft font-medium">💡 Haz clic en cualquier tarjeta abajo para voltearla en 3D</span>
+          </div>
+        </div>
+
+        <!-- Cuadrícula de Vista Previa Interactiva (Frente y Reverso con Flip 3D) -->
+        <div id="print-preview-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 justify-items-center">
+          <!-- Renderizado dinámicamente -->
+        </div>
+      </section>
+
+
+      <!-- ===================================================================
+           MÓDULO 4: MESA DE JUEGO (MARCADOR DIGITAL) Y REGLAMENTO COMPLETO
+      ==================================================================== -->
+      <section id="tab-table" class="tab-panel hidden space-y-8">
+
+        <!-- MESA DE JUEGO INTERACTIVA -->
+        <div class="space-y-5">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-graphite rounded-2xl border border-gold/20 p-5 shadow-cinemaCard">
+            <div>
+              <h2 class="font-display text-3xl tracking-wider text-ivory">MESA DE JUEGO <span class="text-gold">EN VIVO</span></h2>
+              <p class="text-xs sm:text-sm text-slate-400">Controla la línea de tiempo (meta: 10 películas), Boletos/Claquetas, botón de robo ¡CORTE! y reloj de turno.</p>
+            </div>
+
+            <!-- Botón Prominente ¡CORTE! + Temporizador -->
+            <div class="flex flex-wrap items-center gap-3">
+              <button onclick="triggerCorteAction()" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-crimson to-rose-600 text-white font-display text-2xl tracking-widest shadow-crimsonGlow hover:brightness-110 active:scale-95 transition flex items-center gap-2">
+                <span>🎬 ¡CORTE!</span>
+              </button>
+
+              <!-- Temporizador de Turno -->
+              <div class="flex items-center gap-2 bg-noir rounded-2xl border border-white/15 px-3.5 py-2">
+                <div class="text-center min-w-[54px]">
+                  <span id="timer-display" class="font-display text-3xl tracking-wider text-gold leading-none block">00:45</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="toggleTimer()" id="btn-timer-toggle" class="px-2.5 py-1.5 rounded-lg bg-gold text-noir text-xs font-bold hover:brightness-110">Iniciar</button>
+                  <button onclick="resetTimer()" class="px-2 py-1.5 rounded-lg bg-graphiteLight text-slate-300 text-xs font-semibold hover:text-ivory">↺</button>
+                </div>
+                <div class="flex flex-col gap-0.5 border-l border-white/10 pl-2">
+                  <div class="flex gap-1">
+                    <button onclick="setTimerPreset(30)" class="timer-preset text-[10px] px-1.5 py-0.5 rounded bg-graphite text-slate-400 hover:text-gold">30s</button>
+                    <button onclick="setTimerPreset(45)" class="timer-preset text-[10px] px-1.5 py-0.5 rounded bg-gold/20 text-gold font-bold">45s</button>
+                    <button onclick="setTimerPreset(60)" class="timer-preset text-[10px] px-1.5 py-0.5 rounded bg-graphite text-slate-400 hover:text-gold">60s</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Banner de Ganador (oculto hasta llegar a 10) -->
+          <div id="winner-banner" class="hidden rounded-2xl bg-gradient-to-r from-gold/20 via-amber-500/20 to-crimson/20 border-2 border-gold p-5 text-center shadow-goldGlow">
+            <p class="text-xs font-bold uppercase tracking-[0.25em] text-gold">🏆 TENEMOS CINEASTA CAMPEÓN 🏆</p>
+            <h3 id="winner-name" class="font-display text-4xl sm:text-5xl tracking-wider text-ivory mt-1">¡GANADOR!</h3>
+            <p class="text-sm text-slate-300 mt-1">Completó su línea de tiempo de 10 películas en orden cronológico perfecto.</p>
+          </div>
+
+          <!-- Agregar Jugador / Reiniciar Partida -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-1 max-w-md">
+              <input id="new-player-name" type="text" maxlength="22" placeholder="Nombre del jugador (ej. Sofía)..." onkeydown="if(event.key==='Enter') addPlayer()" class="flex-1 px-4 py-2.5 rounded-xl bg-graphite border border-white/15 text-sm text-ivory placeholder-slate-500 focus:outline-none focus:border-gold" />
+              <button onclick="addPlayer()" class="px-4 py-2.5 rounded-xl bg-gold text-noir font-bold text-sm hover:brightness-110 transition shrink-0">
+                + Jugador
+              </button>
+            </div>
+            <button onclick="confirmResetScores()" class="px-4 py-2.5 rounded-xl bg-graphite hover:bg-graphiteLight border border-white/15 text-xs font-semibold text-slate-300 transition">
+              Reiniciar marcadores a 0
+            </button>
+          </div>
+
+          <!-- Tarjetas de Jugadores (2 a 8) -->
+          <div id="players-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- REGLAMENTO OFICIAL COMPLETO DE CINEHIT -->
+        <article class="bg-graphite rounded-3xl border border-gold/20 p-5 sm:p-8 shadow-cinemaCard space-y-6">
+          <div class="border-b border-gold/20 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-[0.2em] text-gold">Manual de Partida</span>
+              <h2 class="font-display text-4xl tracking-wider text-ivory mt-0.5">REGLAMENTO OFICIAL DE CINEHIT</h2>
+            </div>
+            <span class="text-xs text-slate-400">2 a 8 jugadores · 30–45 min · Edad 12+</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300 leading-relaxed">
+
+            <!-- 1. Objetivo -->
+            <div class="bg-noir/60 rounded-2xl p-5 border border-white/10 space-y-2">
+              <h3 class="font-display text-2xl text-gold tracking-wide">1. OBJETIVO DEL JUEGO</h3>
+              <p>
+                Sé el primer jugador en construir una <strong>Línea de Tiempo de 10 películas</strong> ordenadas correctamente por su año de estreno. ¡No necesitas saber el año exacto de memoria, solo ubicar si salió antes, después o entre las películas que ya tienes en mesa!
+              </p>
+            </div>
+
+            <!-- 2. Preparación -->
+            <div class="bg-noir/60 rounded-2xl p-5 border border-white/10 space-y-2">
+              <h3 class="font-display text-2xl text-gold tracking-wide">2. PREPARACIÓN</h3>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Baraja el mazo con los códigos QR boca arriba.</li>
+                <li>Cada jugador recibe <strong>1 tarjeta inicial</strong> (se voltea para mostrar su año; es el ancla de su línea de tiempo) y <strong>2 Boletos</strong> (fichas).</li>
+                <li>Quien haya ido al cine más recientemente inicia la partida. El jugador a su izquierda actúa como <strong>Proyeccionista</strong> (escanea el QR y controla la reproducción).</li>
+              </ul>
+            </div>
+
+            <!-- 3. Desarrollo del Turno -->
+            <div class="bg-noir/60 rounded-2xl p-5 border border-white/10 space-y-2">
+              <h3 class="font-display text-2xl text-gold tracking-wide">3. DESARROLLO DEL TURNO</h3>
+              <ol class="list-decimal pl-5 space-y-1.5">
+                <li>El Proyeccionista escanea la carta superior en <strong>CINEHIT</strong> (con el Escudo Anti-Spoiler activo) y reproduce el clip de 30 segundos.</li>
+                <li>El jugador en turno coloca la carta boca abajo en el lugar de su línea de tiempo donde cree que encaja cronológicamente.</li>
+                <li><em>Opcional (Ganar un Boleto):</em> Antes de revelar, puede intentar nombrar el <strong>Título + Director</strong> (o <strong>Título + Protagonista</strong> en modo casual), y apostar por el <strong>año exacto</strong> para un Boleto extra.</li>
+                <li>Antes de voltear la tarjeta, cualquier rival puede gritar <strong>"¡CORTE!"</strong> para desafiar la posición.</li>
+                <li>Se presiona <strong>"Revelar Respuesta"</strong> (o se voltea la carta). Si el año encaja en orden cronológico (empates de año siempre cuentan como válidos), el jugador se queda con la carta. Si falló, la carta se descarta (o se la roba quien ganó el ¡CORTE!).</li>
+              </ol>
+            </div>
+
+            <!-- 4. Economía de Boletos / Claquetas -->
+            <div class="bg-noir/60 rounded-2xl p-5 border border-white/10 space-y-2">
+              <h3 class="font-display text-2xl text-gold tracking-wide">4. BOLETOS / CLAQUETAS (MÁX. 5)</h3>
+              <p>Ganas <strong>+1 Boleto</strong> si aciertas el Título y el Director (o Protagonista) incluso si te equivocas de año, y <strong>+1 Boleto extra</strong> si además dices el <strong>año exacto</strong> de estreno antes de revelar. Úsalos estratégicamente:</p>
+              <ul class="list-disc pl-5 space-y-1.5">
+                <li><strong class="text-rose-300">¡CORTE! (1 Boleto):</strong> Si crees que el jugador en turno colocó mal su película, apuesta 1 Boleto y señala otro espacio en su línea de tiempo. Si él falla y tú aciertas, ¡te robas su carta para tu propia línea!</li>
+                <li><strong class="text-goldSoft">Siguiente Función (1 Boleto):</strong> En tu turno, descarta una película que no reconoces y saca una nueva del mazo.</li>
+                <li><strong class="text-emerald-300">Pase VIP (3 Boletos):</strong> En cualquier momento de tu turno, gasta 3 Boletos para tomar la carta superior del mazo y añadirla directo a tu línea de tiempo sin adivinar.</li>
+              </ul>
+            </div>
+
+            <!-- 5. Modos de Dificultad -->
+            <div class="bg-noir/60 rounded-2xl p-5 border border-white/10 space-y-2">
+              <h3 class="font-display text-2xl text-gold tracking-wide">5. MODOS DE DIFICULTAD</h3>
+              <ul class="list-disc pl-5 space-y-1.5">
+                <li><strong>🎬 Modo Taquilla (Estándar):</strong> Todos ven y escuchan el clip en pantalla. Ideal para fiestas y familias: el vestuario, la fotografía y los efectos dan pistas geniales sobre la década.</li>
+                <li><strong>🎧 Modo Cinéfilo (Experto):</strong> Activa el interruptor <em>Cinéfilo (Audio)</em> en el reproductor. Solo se escuchan los diálogos y la música. ¡Pura memoria auditiva!</li>
+                <li><strong>🏆 Desempate:</strong> Si dos jugadores llegan a 10 cartas en la misma ronda, juegan una muerte súbita adivinando el año más cercano.</li>
+              </ul>
+            </div>
+
+            <!-- 6. Variantes 2 Jugadores y Equipos -->
+            <div class="bg-noir/60 rounded-2xl p-5 border border-white/10 space-y-2">
+              <h3 class="font-display text-2xl text-gold tracking-wide">6. VARIANTES: 2 JUGADORES Y EQUIPOS</h3>
+              <ul class="list-disc pl-5 space-y-1.5">
+                <li><strong>Duelo 1 vs 1:</strong> Ambos empiezan con 3 Boletos. El rival actúa como Proyeccionista y puede usar <em>¡CORTE!</em> en cada turno. Si el que está en turno no quiere arriesgar, puede ceder el turno por 1 Boleto.</li>
+                <li><strong>Equipos (6–12 personas):</strong> Armen parejas o tríos compartiendo una sola línea de tiempo y debatan durante los 45 segundos del reloj antes de fijar la carta.</li>
+                <li><strong>Cooperativo:</strong> Todo el grupo comparte 1 línea de tiempo y 5 Boletos. Cada error cuesta 1 Boleto. ¿Logran llegar a 10 películas antes de quedarse sin Boletos?</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Guía Rápida de 3 Pasos para Publicar Gratis -->
+          <div class="rounded-2xl bg-gradient-to-br from-gold/10 via-noir to-noir border border-gold/30 p-5 sm:p-6 space-y-4">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">🚀</span>
+              <h3 class="font-display text-2xl sm:text-3xl tracking-wider text-gold">GUÍA RÁPIDA EN 3 PASOS PARA PUBLICAR GRATIS Y ESCANEAR DESDE CUALQUIER CELULAR</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm text-slate-300">
+              <div class="bg-graphite/80 rounded-xl p-4 border border-white/10">
+                <span class="font-display text-2xl text-gold">PASO 1</span>
+                <p class="font-bold text-ivory mt-1">Guarda este archivo como <code class="text-goldSoft">index.html</code></p>
+                <p class="mt-1.5 text-slate-400">Asegúrate de vincular tus clips favoritos en el Gestor (o conectar tu Google Sheet publicado en CSV).</p>
+              </div>
+              <div class="bg-graphite/80 rounded-xl p-4 border border-white/10">
+                <span class="font-display text-2xl text-gold">PASO 2</span>
+                <p class="font-bold text-ivory mt-1">Súbelo gratis en 30 segundos</p>
+                <p class="mt-1.5 text-slate-400">Arrastra la carpeta con <code class="text-goldSoft">index.html</code> a <strong>Netlify Drop</strong> (<em>app.netlify.com/drop</em>) o súbelo a un repositorio público con <strong>GitHub Pages</strong>.</p>
+              </div>
+              <div class="bg-graphite/80 rounded-xl p-4 border border-white/10">
+                <span class="font-display text-2xl text-gold">PASO 3</span>
+                <p class="font-bold text-ivory mt-1">Copia tu URL e imprime el mazo</p>
+                <p class="mt-1.5 text-slate-400">Pega tu nueva dirección web en <strong>Imprimir QR → URL Base</strong>, genera el PDF a doble cara y ¡listo! Cualquier celular que escanee una carta abrirá directo el clip sin spoilers.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+    </main>
+
+    <!-- Pie de página sutil -->
+    <footer class="border-t border-white/5 py-4 px-4 text-center text-xs text-slate-500">
+      CINEHIT Pro · Juego de mesa cronológico cinematográfico · Tus cambios se guardan automáticamente en este dispositivo.
+    </footer>
+  </div>
+
+  <!-- =======================================================================
+       CONTENEDOR EXCLUSIVO DE IMPRESIÓN (@media print)
+  ======================================================================== -->
+  <div id="print-sheet-container"></div>
+
+  <!-- =======================================================================
+       SISTEMA DE MODALES PERSONALIZADOS (SIN alert() NI confirm())
+  ======================================================================== -->
+  <div id="modal-backdrop" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+
+    <!-- Modal 1: Escáner QR con Cámara -->
+    <div id="modal-qr" class="modal-box hidden w-full max-w-md bg-graphite rounded-2xl border border-gold/30 p-5 shadow-cinemaCard space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-2xl tracking-wider text-gold">📷 ESCANEAR TARJETA QR</h3>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-noir text-slate-400 hover:text-ivory flex items-center justify-center">✕</button>
+      </div>
+      <div id="qr-reader-container" class="w-full rounded-xl overflow-hidden bg-noir min-h-[260px] border border-white/10 flex items-center justify-center">
+        <p class="text-xs text-slate-400 p-4 text-center">Iniciando cámara...</p>
+      </div>
+      <div id="qr-error-box" class="hidden rounded-xl bg-crimson/15 border border-crimson/40 p-3 text-xs text-rose-200 leading-relaxed"></div>
+      <p class="text-[11px] text-slate-400 text-center">Apunta la cámara al código QR de la tarjeta. También funciona con la cámara nativa de tu celular al publicar la app.</p>
+    </div>
+
+    <!-- Modal 2: Agregar / Editar Película -->
+    <div id="modal-movie" class="modal-box hidden w-full max-w-lg bg-graphite rounded-2xl border border-gold/30 p-5 sm:p-6 shadow-cinemaCard space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 id="modal-movie-title" class="font-display text-2xl tracking-wider text-gold">AGREGAR PELÍCULA</h3>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-noir text-slate-400 hover:text-ivory flex items-center justify-center">✕</button>
+      </div>
+      <form id="movie-form" onsubmit="saveMovieForm(event)" class="space-y-3.5 text-sm">
+        <input type="hidden" id="form-original-id" />
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ID Tarjeta *</label>
+            <input id="form-id" type="text" required maxlength="4" class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Año *</label>
+            <input id="form-year" type="number" required min="1900" max="2035" class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Género *</label>
+            <input id="form-genre" type="text" required placeholder="Acción" class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Título de la Película *</label>
+          <input id="form-title" type="text" required class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Director *</label>
+            <input id="form-director" type="text" required class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Protagonista *</label>
+            <input id="form-lead" type="text" required class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Escena Icónica Recomendada *</label>
+          <input id="form-scene" type="text" required class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory" />
+        </div>
+        <div class="pt-2 border-t border-white/10 space-y-3">
+          <div>
+            <label class="block text-xs text-gold mb-1 font-semibold">Enlace o ID de YouTube (opcional)</label>
+            <input id="form-youtube" type="text" placeholder="https://www.youtube.com/watch?v=... o ID de 11 caracteres" class="w-full px-3 py-2 rounded-xl bg-noir border border-gold/25 text-ivory font-mono text-xs" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Inicio del clip (seg)</label>
+              <input id="form-start" type="number" min="0" value="0" class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Fin del clip (seg)</label>
+              <input id="form-end" type="number" min="5" value="30" class="w-full px-3 py-2 rounded-xl bg-noir border border-white/15 text-ivory font-mono" />
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeAllModals()" class="px-4 py-2.5 rounded-xl bg-noir text-slate-300 text-xs font-semibold">Cancelar</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-gold text-noir font-bold text-xs hover:brightness-110">Guardar Tarjeta</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 3: ¡CORTE! (Recordatorio de Robo) -->
+    <div id="modal-corte" class="modal-box hidden w-full max-w-md bg-gradient-to-b from-[#1E1420] to-graphite rounded-2xl border-2 border-crimson p-6 shadow-crimsonGlow text-center space-y-4">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-crimson/20 border border-crimson text-crimson flex items-center justify-center text-3xl">
+        🎬
+      </div>
+      <h3 class="font-display text-5xl tracking-widest text-white">¡CORTE!</h3>
+      <p class="text-sm text-rose-100 leading-relaxed">
+        <strong>¡Desafío de robo activado!</strong> El jugador retador apuesta <strong>1 Boleto</strong> y coloca su ficha en otro espacio de la línea de tiempo del jugador en turno.
+      </p>
+      <div class="bg-noir/70 rounded-xl p-3.5 text-xs text-slate-300 text-left space-y-1.5 border border-white/10">
+        <p>• Si el jugador en turno <strong>falla</strong> y el retador <strong>acierta</strong>: el retador se roba la tarjeta para su propia línea de tiempo.</p>
+        <p>• Si el jugador en turno <strong>acierta</strong>: el retador pierde su Boleto apostado.</p>
+        <p>• Si ambos fallan: la tarjeta se descarta y el retador pierde su Boleto.</p>
+      </div>
+      <button onclick="closeAllModals()" class="w-full py-3 rounded-xl bg-crimson hover:bg-rose-600 text-white font-bold text-sm transition">
+        Entendido — ¡A revelar la tarjeta!
+      </button>
+    </div>
+
+    <!-- Modal 4: Confirmación Genérica (Reemplazo elegante de confirm()) -->
+    <div id="modal-confirm" class="modal-box hidden w-full max-w-sm bg-graphite rounded-2xl border border-gold/30 p-5 shadow-cinemaCard space-y-4">
+      <h3 id="confirm-title" class="font-display text-2xl tracking-wider text-gold">CONFIRMAR ACCIÓN</h3>
+      <p id="confirm-message" class="text-sm text-slate-300 leading-relaxed"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAllModals()" class="px-4 py-2 rounded-xl bg-noir text-slate-300 text-xs font-semibold">Cancelar</button>
+        <button id="confirm-accept-btn" class="px-4 py-2 rounded-xl bg-crimson text-white font-bold text-xs hover:brightness-110">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Notificaciones Toast -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+
+
+  <!-- =======================================================================
+       LÓGICA DE LA APLICACIÓN CINEHIT (JAVASCRIPT MODULAR Y ROBUSTO)
+  ======================================================================== -->
+  <script>
+    /* =====================================================================
+       1. BASE DE DATOS PRECARGADA: 100 PELÍCULAS ICÓNICAS (1939–2025)
+          Los números de tarjeta van barajados a propósito: el # impreso NO delata el año.
+    ===================================================================== */
+    const BASE_MOVIES = [
+      { id: "001", year: 1982, title: "E.T., el extraterrestre", director: "Steven Spielberg", lead: "Henry Thomas", genre: "Aventura", scene: "Las bicicletas salen volando", youtubeId: "oR1-UFrcZ0k", startSec: 30, endSec: 60 },
+      { id: "002", year: 1993, title: "Parque Jurásico", director: "Steven Spielberg", lead: "Sam Neill", genre: "Aventura", scene: "El ataque del T-Rex bajo la lluvia", youtubeId: "LhB9z3ao1y8", startSec: 40, endSec: 70 },
+      { id: "003", year: 2004, title: "Chicas pesadas", director: "Mark Waters", lead: "Lindsay Lohan", genre: "Comedia", scene: "\"Los miércoles usamos rosa\"", youtubeId: "fkfwrXgfRr4", startSec: 36, endSec: 66 },
+      { id: "004", year: 2009, title: "Avatar", director: "James Cameron", lead: "Sam Worthington", genre: "Ciencia Ficción", scene: "Jake doma a su ikran", youtubeId: "ZM2k1UmcCXg", startSec: 40, endSec: 70 },
+      { id: "005", year: 1981, title: "Indiana Jones: Los cazadores del arca perdida", director: "Steven Spielberg", lead: "Harrison Ford", genre: "Aventura", scene: "La huida de la roca gigante", youtubeId: "c6XHLe94SJA", startSec: 30, endSec: 60 },
+      { id: "006", year: 2001, title: "El Señor de los Anillos: La Comunidad del Anillo", director: "Peter Jackson", lead: "Elijah Wood", genre: "Fantasía", scene: "\"¡No puedes pasar!\": Gandalf contra el Balrog", youtubeId: "3bReJswiMGM", startSec: 27, endSec: 57 },
+      { id: "007", year: 2023, title: "Barbie", director: "Greta Gerwig", lead: "Margot Robbie", genre: "Comedia", scene: "La fiesta y el baile en Barbieland", youtubeId: "1TgNVNoxPw8", startSec: 40, endSec: 70 },
+      { id: "008", year: 2020, title: "Sonic: La película", director: "Jeff Fowler", lead: "Jim Carrey", genre: "Aventura", scene: "El pequeño Sonic escapa de su mundo", youtubeId: "OkWp8J7bkJ0", startSec: 25, endSec: 55 },
+      { id: "009", year: 2018, title: "Pantera Negra", director: "Ryan Coogler", lead: "Chadwick Boseman", genre: "Superhéroes", scene: "La persecución en auto por Busan", youtubeId: "4OIBVNoq6ok", startSec: 40, endSec: 70 },
+      { id: "010", year: 1996, title: "Misión: Imposible", director: "Brian De Palma", lead: "Tom Cruise", genre: "Acción", scene: "Ethan desciende a la bóveda de la CIA", youtubeId: "k-oVuQpjG3s", startSec: 31, endSec: 61 },
+      { id: "011", year: 1991, title: "Terminator 2: El juicio final", director: "James Cameron", lead: "Arnold Schwarzenegger", genre: "Acción", scene: "\"Hasta la vista, baby\"", youtubeId: "hAYO7AEvBig", startSec: 40, endSec: 70 },
+      { id: "012", year: 1984, title: "Los Cazafantasmas", director: "Ivan Reitman", lead: "Bill Murray", genre: "Comedia", scene: "Pegajoso llena de baba a Venkman en el hotel", youtubeId: "CH7UQQgJDzw", startSec: 25, endSec: 55 },
+      { id: "013", year: 1987, title: "Dirty Dancing", director: "Emile Ardolino", lead: "Patrick Swayze", genre: "Romance", scene: "El baile final \"(I've Had) The Time of My Life\"", youtubeId: "XINddkzfTzM", startSec: 60, endSec: 90 },
+      { id: "014", year: 2025, title: "Pecadores", director: "Ryan Coogler", lead: "Michael B. Jordan", genre: "Terror", scene: "Sammie toca \"I Lied to You\" en el juke joint", youtubeId: "S7jo5Cr6WUA", startSec: 60, endSec: 90 },
+      { id: "015", year: 1968, title: "2001: Odisea del espacio", director: "Stanley Kubrick", lead: "Keir Dullea", genre: "Ciencia Ficción", scene: "Dave desconecta a HAL 9000", youtubeId: "V0bUd6KrQGg", startSec: 60, endSec: 90 },
+      { id: "016", year: 2024, title: "Wicked", director: "Jon M. Chu", lead: "Cynthia Erivo", genre: "Musical", scene: "Glinda canta \"Popular\"", youtubeId: "vDuBWmYBCwE", startSec: 40, endSec: 70 },
+      { id: "017", year: 2010, title: "El origen", director: "Christopher Nolan", lead: "Leonardo DiCaprio", genre: "Ciencia Ficción", scene: "La pelea en el pasillo giratorio", youtubeId: "X-KDt-G1pJ0", startSec: 25, endSec: 55 },
+      { id: "018", year: 2021, title: "Encanto", director: "Jared Bush y Byron Howard", lead: "Stephanie Beatriz", genre: "Animación", scene: "\"No se habla de Bruno\"", youtubeId: "bvWRMAU6V-c", startSec: 45, endSec: 75 },
+      { id: "019", year: 2018, title: "Spider-Man: Un nuevo universo", director: "Bob Persichetti y Peter Ramsey", lead: "Shameik Moore", genre: "Animación", scene: "Miles Morales se convierte en Spider-Man", youtubeId: "wRBh4BgE-L4", startSec: 27, endSec: 57 },
+      { id: "020", year: 2001, title: "Shrek", director: "Andrew Adamson y Vicky Jenson", lead: "Mike Myers", genre: "Animación", scene: "\"Los ogros son como las cebollas\"", youtubeId: "zUQ9bjBfiRk", startSec: 24, endSec: 54 },
+      { id: "021", year: 1978, title: "Vaselina", director: "Randal Kleiser", lead: "John Travolta", genre: "Musical", scene: "Sandy y Danny cantan \"You're the One That I Want\"", youtubeId: "RYk0_U7kf3g", startSec: 40, endSec: 70 },
+      { id: "022", year: 1988, title: "Duro de matar", director: "John McTiernan", lead: "Bruce Willis", genre: "Acción", scene: "\"Yippee-ki-yay\": McClane contra Hans por radio", youtubeId: "BSRrzrQtmto", startSec: 12, endSec: 42 },
+      { id: "023", year: 1960, title: "Psicosis", director: "Alfred Hitchcock", lead: "Anthony Perkins", genre: "Suspenso", scene: "La escena de la ducha en el Motel Bates", youtubeId: "0WtDmbr9xyY", startSec: 39, endSec: 69 },
+      { id: "024", year: 1986, title: "Top Gun", director: "Tony Scott", lead: "Tom Cruise", genre: "Acción", scene: "\"Estaba invertido\": Maverick en clase con Charlie", youtubeId: "wUZxSf_P2r0", startSec: 28, endSec: 58 },
+      { id: "025", year: 2016, title: "La La Land", director: "Damien Chazelle", lead: "Ryan Gosling", genre: "Musical", scene: "El número musical inicial en la autopista", youtubeId: "7CVfTd-_qbc", startSec: 40, endSec: 70 },
+      { id: "026", year: 2009, title: "¿Qué pasó ayer?", director: "Todd Phillips", lead: "Bradley Cooper", genre: "Comedia", scene: "La recepción de la boda", youtubeId: "sIbYUg1FKK4", startSec: 18, endSec: 48 },
+      { id: "027", year: 1965, title: "La novicia rebelde", director: "Robert Wise", lead: "Julie Andrews", genre: "Musical", scene: "María enseña \"Do-Re-Mi\" a los niños", youtubeId: "pLm07s8fnzM", startSec: 26, endSec: 56 },
+      { id: "028", year: 2022, title: "Top Gun: Maverick", director: "Joseph Kosinski", lead: "Tom Cruise", genre: "Acción", scene: "Maverick lleva el Darkstar a Mach 10", youtubeId: "wmzkizC6Rz4", startSec: 40, endSec: 70 },
+      { id: "029", year: 2019, title: "Parásitos", director: "Bong Joon-ho", lead: "Song Kang-ho", genre: "Suspenso", scene: "Los mejores momentos de Ki-jung (\"Jessica\")", youtubeId: "iYWBGJzXvs0", startSec: 25, endSec: 55 },
+      { id: "030", year: 1995, title: "Toy Story", director: "John Lasseter", lead: "Tom Hanks", genre: "Animación", scene: "\"Eso no es volar, es caer con estilo\"", youtubeId: "T2b-Ve0GHBw", startSec: 12, endSec: 42 },
+      { id: "031", year: 1966, title: "El bueno, el malo y el feo", director: "Sergio Leone", lead: "Clint Eastwood", genre: "Western", scene: "El duelo final entre los tres", youtubeId: "5PgAKzmWmuk", startSec: 30, endSec: 60 },
+      { id: "032", year: 1952, title: "Cantando bajo la lluvia", director: "Gene Kelly y Stanley Donen", lead: "Gene Kelly", genre: "Musical", scene: "Gene Kelly canta y baila bajo la lluvia", youtubeId: "swloMVFALXw", startSec: 60, endSec: 90 },
+      { id: "033", year: 2019, title: "Guasón", director: "Todd Phillips", lead: "Joaquin Phoenix", genre: "Drama", scene: "El baile en las escaleras", youtubeId: "Tl5zk46i0Bs", startSec: 3, endSec: 33 },
+      { id: "034", year: 2003, title: "Escuela de rock", director: "Richard Linklater", lead: "Jack Black", genre: "Comedia", scene: "La primera lección de rock", youtubeId: "RVb5kJv4JbE", startSec: 40, endSec: 70 },
+      { id: "035", year: 1999, title: "Matrix", director: "Lana y Lilly Wachowski", lead: "Keanu Reeves", genre: "Ciencia Ficción", scene: "Pastilla roja o pastilla azul", youtubeId: "zE7PKRjrid4", startSec: 30, endSec: 60 },
+      { id: "036", year: 2017, title: "Eso", director: "Andy Muschietti", lead: "Bill Skarsgård", genre: "Terror", scene: "Georgie conoce a Pennywise en la alcantarilla", youtubeId: "eUscbH7EbeE", startSec: 40, endSec: 70 },
+      { id: "037", year: 1976, title: "Rocky", director: "John G. Avildsen", lead: "Sylvester Stallone", genre: "Deportes", scene: "El entrenamiento y las escaleras de Filadelfia", youtubeId: "_YYmfM2TfUA", startSec: 37, endSec: 67 },
+      { id: "038", year: 1994, title: "La máscara", director: "Chuck Russell", lead: "Jim Carrey", genre: "Comedia", scene: "\"¡Ssssmokin'!\": Stanley se pone la máscara", youtubeId: "csvOWBDx1oM", startSec: 29, endSec: 59 },
+      { id: "039", year: 1990, title: "Mi pobre angelito", director: "Chris Columbus", lead: "Macaulay Culkin", genre: "Comedia", scene: "Las trampas de Kevin contra los ladrones", youtubeId: "ddXUQu9RC4U", startSec: 29, endSec: 59 },
+      { id: "040", year: 1983, title: "Caracortada", director: "Brian De Palma", lead: "Al Pacino", genre: "Crimen", scene: "\"Saluden a mi pequeño amigo\"", youtubeId: "9m_12SGXNKw", startSec: 37, endSec: 67 },
+      { id: "041", year: 2025, title: "Una película de Minecraft", director: "Jared Hess", lead: "Jack Black", genre: "Aventura", scene: "Los aldeanos escapan del ataque de los piglins", youtubeId: "BZmGQbpoFCk", startSec: 40, endSec: 70 },
+      { id: "042", year: 1980, title: "El resplandor", director: "Stanley Kubrick", lead: "Jack Nicholson", genre: "Terror", scene: "\"¡Aquí está Johnny!\"", youtubeId: "WDpipB4yehk", startSec: 30, endSec: 60 },
+      { id: "043", year: 2001, title: "Harry Potter y la piedra filosofal", director: "Chris Columbus", lead: "Daniel Radcliffe", genre: "Fantasía", scene: "\"Eres un mago, Harry\"", youtubeId: "z9GwIeh5FIY", startSec: 28, endSec: 58 },
+      { id: "044", year: 2013, title: "El lobo de Wall Street", director: "Martin Scorsese", lead: "Leonardo DiCaprio", genre: "Comedia", scene: "Jordan funda Stratton Oakmont", youtubeId: "zpN7t6LN42s", startSec: 60, endSec: 90 },
+      { id: "045", year: 1998, title: "Rescatando al soldado Ryan", director: "Steven Spielberg", lead: "Tom Hanks", genre: "Drama", scene: "El capitán Miller: \"Esa es mi misión\"", youtubeId: "LvAIBDGIYE0", startSec: 29, endSec: 59 },
+      { id: "046", year: 1984, title: "Karate Kid", director: "John G. Avildsen", lead: "Ralph Macchio", genre: "Deportes", scene: "La patada de la grulla en la final", youtubeId: "8cPM8DaOSFk", startSec: 39, endSec: 69 },
+      { id: "047", year: 2003, title: "Buscando a Nemo", director: "Andrew Stanton", lead: "Albert Brooks", genre: "Animación", scene: "Dory canta \"Nadaremos\"", youtubeId: "y9FGsJ3PYVw", startSec: 11, endSec: 41 },
+      { id: "048", year: 2000, title: "Náufrago", director: "Robert Zemeckis", lead: "Tom Hanks", genre: "Drama", scene: "\"¡Perdóname, Wilson!\"", youtubeId: "LHtgKIFoQfE", startSec: 31, endSec: 61 },
+      { id: "049", year: 1997, title: "Titanic", director: "James Cameron", lead: "Leonardo DiCaprio", genre: "Romance", scene: "\"¡Soy el rey del mundo!\"", youtubeId: "UE5KcYjO5d8", startSec: 16, endSec: 46 },
+      { id: "050", year: 1997, title: "Hombres de negro", director: "Barry Sonnenfeld", lead: "Will Smith", genre: "Ciencia Ficción", scene: "El recorrido por el cuartel de los Hombres de Negro", youtubeId: "q3OTEdZkBaQ", startSec: 22, endSec: 52 },
+      { id: "051", year: 2008, title: "Iron Man: El hombre de hierro", director: "Jon Favreau", lead: "Robert Downey Jr.", genre: "Superhéroes", scene: "\"Yo soy Iron Man\"", youtubeId: "aNNdVZ-mVy4", startSec: 40, endSec: 70 },
+      { id: "052", year: 1985, title: "Volver al futuro", director: "Robert Zemeckis", lead: "Michael J. Fox", genre: "Ciencia Ficción", scene: "Marty regresa en el DeLorean", youtubeId: "QyrV3UbSdDQ", startSec: 24, endSec: 54 },
+      { id: "053", year: 2012, title: "Los juegos del hambre", director: "Gary Ross", lead: "Jennifer Lawrence", genre: "Acción", scene: "\"¡Me ofrezco como tributo!\"", youtubeId: "v98Rh9qzmPs", startSec: 40, endSec: 70 },
+      { id: "054", year: 2000, title: "Gladiador", director: "Ridley Scott", lead: "Russell Crowe", genre: "Acción", scene: "\"¿No se han divertido?\" en la arena", youtubeId: "fiVno2_W0U8", startSec: 25, endSec: 55 },
+      { id: "055", year: 2024, title: "Deadpool & Wolverine", director: "Shawn Levy", lead: "Ryan Reynolds", genre: "Acción", scene: "Deadpool y Wolverine conocen al nuevo equipo", youtubeId: "k6by4zb1WNQ", startSec: 45, endSec: 75 },
+      { id: "056", year: 1991, title: "El silencio de los inocentes", director: "Jonathan Demme", lead: "Jodie Foster", genre: "Suspenso", scene: "Clarice conoce a Hannibal Lecter", youtubeId: "EnMV60UDuF0", startSec: 75, endSec: 105 },
+      { id: "057", year: 1977, title: "Star Wars: Una nueva esperanza", director: "George Lucas", lead: "Mark Hamill", genre: "Ciencia Ficción", scene: "Luke entra a la cantina de Mos Eisley", youtubeId: "sPelOnd7Sik", startSec: 31, endSec: 61 },
+      { id: "058", year: 1972, title: "El Padrino", director: "Francis Ford Coppola", lead: "Marlon Brando", genre: "Crimen", scene: "\"Le haré una oferta que no podrá rechazar\"", youtubeId: "D6me2-OurCw", startSec: 14, endSec: 44 },
+      { id: "059", year: 2021, title: "Duna", director: "Denis Villeneuve", lead: "Timothée Chalamet", genre: "Ciencia Ficción", scene: "La prueba del Gom Jabbar", youtubeId: "7SCWy9gsw3E", startSec: 40, endSec: 70 },
+      { id: "060", year: 1994, title: "Forrest Gump", director: "Robert Zemeckis", lead: "Tom Hanks", genre: "Drama", scene: "\"¡Corre, Forrest, corre!\"", youtubeId: "bSMxl1V8FSg", startSec: 26, endSec: 56 },
+      { id: "061", year: 2002, title: "El Hombre Araña", director: "Sam Raimi", lead: "Tobey Maguire", genre: "Superhéroes", scene: "El beso de cabeza bajo la lluvia", youtubeId: "aBpwrORhKWU", startSec: 31, endSec: 61 },
+      { id: "062", year: 2009, title: "Up: Una aventura de altura", director: "Pete Docter", lead: "Ed Asner", genre: "Animación", scene: "\"¡Lo logramos!\": la casa llega a las cataratas", youtubeId: "IV5Fxr1aZ_U", startSec: 40, endSec: 70 },
+      { id: "063", year: 2018, title: "Bohemian Rhapsody", director: "Bryan Singer", lead: "Rami Malek", genre: "Musical", scene: "Live Aid: \"We Are the Champions\"", youtubeId: "1zjV9BNLykU", startSec: 45, endSec: 75 },
+      { id: "064", year: 2004, title: "¿Y dónde están las rubias?", director: "Keenen Ivory Wayans", lead: "Marlon Wayans", genre: "Comedia", scene: "El duelo de insultos en el restaurante", youtubeId: "ywgFa00pG7s", startSec: 40, endSec: 70 },
+      { id: "065", year: 2013, title: "Frozen: Una aventura congelada", director: "Chris Buck y Jennifer Lee", lead: "Kristen Bell", genre: "Animación", scene: "Elsa canta \"Libre soy\"", youtubeId: "moSFlvxnbgk", startSec: 60, endSec: 90 },
+      { id: "066", year: 2021, title: "Spider-Man: Sin camino a casa", director: "Jon Watts", lead: "Tom Holland", genre: "Superhéroes", scene: "Se revela la identidad de Peter Parker", youtubeId: "PQY9YbQhYc0", startSec: 40, endSec: 70 },
+      { id: "067", year: 2014, title: "Interestelar", director: "Christopher Nolan", lead: "Matthew McConaughey", genre: "Ciencia Ficción", scene: "La ola gigante en el planeta de Miller", youtubeId: "TF2nIlCs9Qg", startSec: 27, endSec: 57 },
+      { id: "068", year: 2006, title: "El diablo viste a la moda", director: "David Frankel", lead: "Meryl Streep", genre: "Comedia", scene: "Miranda y el monólogo del suéter cerúleo", youtubeId: "Ja2fgquYTCg", startSec: 25, endSec: 55 },
+      { id: "069", year: 2017, title: "¡Huye!", director: "Jordan Peele", lead: "Daniel Kaluuya", genre: "Terror", scene: "El lugar hundido: la hipnosis con la taza de té", youtubeId: "kBwVWrBk_uo", startSec: 40, endSec: 70 },
+      { id: "070", year: 2024, title: "Intensamente 2", director: "Kelsey Mann", lead: "Amy Poehler", genre: "Animación", scene: "Suena la alarma de la pubertad", youtubeId: "WsegDnZ10FQ", startSec: 40, endSec: 70 },
+      { id: "071", year: 2003, title: "Kill Bill: Volumen 1", director: "Quentin Tarantino", lead: "Uma Thurman", genre: "Acción", scene: "El enfrentamiento en la Casa de las Hojas Azules", youtubeId: "EajaioMj-NA", startSec: 31, endSec: 61 },
+      { id: "072", year: 1939, title: "El mago de Oz", director: "Victor Fleming", lead: "Judy Garland", genre: "Fantasía", scene: "El Espantapájaros canta \"Si tuviera un cerebro\"", youtubeId: "nauLgZISozs", startSec: 30, endSec: 60 },
+      { id: "073", year: 1994, title: "El Rey León", director: "Roger Allers y Rob Minkoff", lead: "Matthew Broderick", genre: "Animación", scene: "El ciclo sin fin: la presentación de Simba", youtubeId: "GibiNy4d4gc", startSec: 30, endSec: 60 },
+      { id: "074", year: 2022, title: "Todo en todas partes al mismo tiempo", director: "Daniel Kwan y Daniel Scheinert", lead: "Michelle Yeoh", genre: "Ciencia Ficción", scene: "La pelea con la cangurera", youtubeId: "osBAPfCAPT8", startSec: 12, endSec: 42 },
+      { id: "075", year: 2015, title: "Mad Max: Furia en el camino", director: "George Miller", lead: "Tom Hardy", genre: "Acción", scene: "Max contraataca en plena persecución", youtubeId: "AWvRcWDr5y8", startSec: 40, endSec: 70 },
+      { id: "076", year: 1985, title: "Los Goonies", director: "Richard Donner", lead: "Sean Astin", genre: "Aventura", scene: "Gordi hace el \"Truffle Shuffle\"", youtubeId: "kr_z37TgQO4", startSec: 13, endSec: 43 },
+      { id: "077", year: 1992, title: "El guardaespaldas", director: "Mick Jackson", lead: "Kevin Costner", genre: "Romance", scene: "Frank protege a Rachel", youtubeId: "tx8u3J7TlWg", startSec: 18, endSec: 48 },
+      { id: "078", year: 2012, title: "Los Vengadores", director: "Joss Whedon", lead: "Robert Downey Jr.", genre: "Superhéroes", scene: "Los Vengadores se reúnen contra los Chitauri", youtubeId: "cILXVO90DeI", startSec: 40, endSec: 70 },
+      { id: "079", year: 1994, title: "Tiempos violentos", director: "Quentin Tarantino", lead: "John Travolta", genre: "Crimen", scene: "El baile de Mia y Vincent", youtubeId: "o5qXCzknxn8", startSec: 40, endSec: 70 },
+      { id: "080", year: 1942, title: "Casablanca", director: "Michael Curtiz", lead: "Humphrey Bogart", genre: "Romance", scene: "La despedida en el aeropuerto", youtubeId: "rEWaqUVac3M", startSec: 28, endSec: 58 },
+      { id: "081", year: 2017, title: "Coco", director: "Lee Unkrich", lead: "Anthony Gonzalez", genre: "Animación", scene: "Miguel canta \"Recuérdame\" a Mamá Coco", youtubeId: "xYUw8ESMXoc", startSec: 40, endSec: 70 },
+      { id: "082", year: 2023, title: "Oppenheimer", director: "Christopher Nolan", lead: "Cillian Murphy", genre: "Drama", scene: "La prueba Trinity", youtubeId: "tK0IDmSYYGk", startSec: 18, endSec: 48 },
+      { id: "083", year: 2019, title: "Avengers: Endgame", director: "Anthony y Joe Russo", lead: "Robert Downey Jr.", genre: "Superhéroes", scene: "La batalla final: \"Avengers… ¡unidos!\"", youtubeId: "e2tZ-u9dWsk", startSec: 40, endSec: 70 },
+      { id: "084", year: 2007, title: "Ratatouille", director: "Brad Bird", lead: "Patton Oswalt", genre: "Animación", scene: "Remy discute con su papá", youtubeId: "_etmPC2y-Tc", startSec: 30, endSec: 60 },
+      { id: "085", year: 2022, title: "The Batman", director: "Matt Reeves", lead: "Robert Pattinson", genre: "Superhéroes", scene: "La persecución del Batimóvil tras el Pingüino", youtubeId: "uXMfZrj0g_c", startSec: 40, endSec: 70 },
+      { id: "086", year: 1989, title: "Batman", director: "Tim Burton", lead: "Michael Keaton", genre: "Superhéroes", scene: "\"Puedes llamarme Guasón\"", youtubeId: "yPBPcACUTng", startSec: 22, endSec: 52 },
+      { id: "087", year: 1973, title: "El exorcista", director: "William Friedkin", lead: "Linda Blair", genre: "Terror", scene: "La visita médica que se sale de control", youtubeId: "sZazSFEHfg8", startSec: 19, endSec: 49 },
+      { id: "088", year: 1999, title: "El club de la pelea", director: "David Fincher", lead: "Brad Pitt", genre: "Suspenso", scene: "La primera regla del club de la pelea", youtubeId: "dC1yHLp9bWA", startSec: 30, endSec: 60 },
+      { id: "089", year: 1971, title: "La naranja mecánica", director: "Stanley Kubrick", lead: "Malcolm McDowell", genre: "Ciencia Ficción", scene: "Alex y sus drugos: la secuencia inicial", youtubeId: "tR6nk8PUTFI", startSec: 45, endSec: 75 },
+      { id: "090", year: 2023, title: "Super Mario Bros.: La película", director: "Aaron Horvath y Michael Jelenic", lead: "Chris Pratt", genre: "Animación", scene: "Mario y Luigi con la estrella de invencibilidad", youtubeId: "MCJIHAV8FrE", startSec: 31, endSec: 61 },
+      { id: "091", year: 2023, title: "John Wick 4", director: "Chad Stahelski", lead: "Keanu Reeves", genre: "Acción", scene: "La pelea al ritmo de \"Paint It Black\"", youtubeId: "jUIZdspS32E", startSec: 30, endSec: 60 },
+      { id: "092", year: 1979, title: "Alien: El octavo pasajero", director: "Ridley Scott", lead: "Sigourney Weaver", genre: "Terror", scene: "El alien aparece en la nave", youtubeId: "3YTIMGmZUr4", startSec: 29, endSec: 59 },
+      { id: "093", year: 1975, title: "Tiburón", director: "Steven Spielberg", lead: "Roy Scheider", genre: "Suspenso", scene: "\"Vas a necesitar un barco más grande\"", youtubeId: "2I91DJZKRxs", startSec: 20, endSec: 50 },
+      { id: "094", year: 2004, title: "Los Increíbles", director: "Brad Bird", lead: "Craig T. Nelson", genre: "Animación", scene: "\"¿Dónde está mi súper traje?\"", youtubeId: "WLR_UFGuCAo", startSec: 37, endSec: 67 },
+      { id: "095", year: 2014, title: "Guardianes de la Galaxia", director: "James Gunn", lead: "Chris Pratt", genre: "Superhéroes", scene: "Los Guardianes se reúnen a planear", youtubeId: "FB4lIlFVfk8", startSec: 40, endSec: 70 },
+      { id: "096", year: 2025, title: "Superman", director: "James Gunn", lead: "David Corenswet", genre: "Superhéroes", scene: "Krypto y Superman", youtubeId: "ijKw6F6VnDA", startSec: 40, endSec: 70 },
+      { id: "097", year: 2008, title: "Crepúsculo", director: "Catherine Hardwicke", lead: "Kristen Stewart", genre: "Romance", scene: "El partido de béisbol de los vampiros", youtubeId: "qhDPJ7ozL6s", startSec: 27, endSec: 57 },
+      { id: "098", year: 2008, title: "Batman: El caballero de la noche", director: "Christopher Nolan", lead: "Heath Ledger", genre: "Superhéroes", scene: "Batman interroga al Guasón", youtubeId: "co2bs_OjLG8", startSec: 40, endSec: 70 },
+      { id: "099", year: 1990, title: "Mujer bonita", director: "Garry Marshall", lead: "Julia Roberts", genre: "Romance", scene: "De compras en Rodeo Drive: \"Gran error, enorme\"", youtubeId: "mDBFoHj4X6Y", startSec: 60, endSec: 90 },
+      { id: "100", year: 1999, title: "Sexto sentido", director: "M. Night Shyamalan", lead: "Bruce Willis", genre: "Suspenso", scene: "\"Veo gente muerta\"", youtubeId: "RoYEEjtDYKw", startSec: 40, endSec: 70 }
+    ];
+
+    /* =====================================================================
+       2. ESTADO GLOBAL Y PERSISTENCIA EN LOCALSTORAGE
+    ===================================================================== */
+    const BASE_DECK_VERSION = "2026-11-22.1";
+    const STORAGE_KEYS = {
+      DECK: 'cinehit_deck_v1',
+      DECK_VERSION: 'cinehit_deck_version',
+      SHEET_URL: 'cinehit_sheet_url_v1',
+      PLAYERS: 'cinehit_players_v1',
+      PRINT_CFG: 'cinehit_print_cfg_v1'
+    };
+
+    let deck = [];
+    let currentCard = null;
+    let isRevealed = false;
+    let playMode = 'taquilla'; // 'taquilla' | 'cinefilo'
+    let usedCardIds = new Set();
+
+    // Estado de YouTube IFrame Player
+    let ytApiReady = false;
+    let ytPlayer = null;
+    let ytPlayerReady = false;
+    let pendingVideoCard = null;
+    let isPlaying = false;
+    let isMuted = false;
+    let progressInterval = null;
+
+    // Estado de Escáner QR
+    let html5QrScanner = null;
+
+    // Estado de Mesa de Juego y Temporizador
+    let players = [];
+    let timerPreset = 45;
+    let timerRemaining = 45;
+    let timerInterval = null;
+    let timerRunning = false;
+
+    // Íconos de Género (Emoji nítido y universal)
+    const GENRE_ICONS = {
+      'Suspenso': '🔪',
+      'Ciencia Ficción': '🚀',
+      'Crimen': '🎩',
+      'Deportes': '🥊',
+      'Terror': '👻',
+      'Aventura': '🧭',
+      'Comedia': '😂',
+      'Acción': '💥',
+      'Drama': '🎭',
+      'Animación': '✨',
+      'Romance': '❤️',
+      'Fantasía': '🧙',
+      'Superhéroes': '🦸',
+      'Musical': '🎵',
+      'Western': '🤠'
+    };
+
+    function getGenreIcon(genre) {
+      return GENRE_ICONS[genre] || '🎬';
+    }
+
+    function padCardId(val) {
+      const clean = String(val || '').replace(/\D/g, '');
+      if (!clean) return '';
+      return clean.padStart(3, '0');
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /* =====================================================================
+       3. AUDIO SINTETIZADO CON WEB AUDIO API (SIN ARCHIVOS EXTERNOS)
+    ===================================================================== */
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    // Sonido seco de claqueta de cine para "¡CORTE!"
+    function playClapperSound() {
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+
+        // Golpe de madera (ruido filtrado + transitorio)
+        const bufferSize = ctx.sampleRate * 0.14;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.018));
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1450, now);
+        filter.Q.setValueAtTime(2.2, now);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(1.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(now);
+
+        // Cuerpo de madera grave
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(95, now + 0.07);
+        oscGain.gain.setValueAtTime(0.55, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(oscGain);
+        oscGain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } catch (e) {}
+    }
+
+    // Sonido suave para fin de temporizador
+    function playTimerEndChime() {
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        const notes = [880, 659.25, 880];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const t = ctx.currentTime + idx * 0.18;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.22, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.26);
+        });
+      } catch (e) {}
+    }
+
+    // Sonido fanfarria dorada al ganar o revelar
+    function playRevealChime() {
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const t = ctx.currentTime + i * 0.07;
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.14, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.36);
+        });
+      } catch (e) {}
+    }
+
+    /* =====================================================================
+       4. TOASTS Y MODALES (CERO alert / confirm)
+    ===================================================================== */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        success: 'border-emerald-400/50 bg-[#10201B] text-emerald-100',
+        error: 'border-crimson/60 bg-[#251118] text-rose-100',
+        gold: 'border-gold/60 bg-[#211B0F] text-amber-100',
+        info: 'border-white/20 bg-graphite text-ivory'
+      };
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-4 py-3 rounded-xl border text-xs sm:text-sm font-semibold shadow-cinemaCard transition-all duration-300 translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      el.textContent = message;
+      container.appendChild(el);
+      requestAnimationFrame(() => {
+        el.classList.remove('translate-y-2', 'opacity-0');
+      });
+      setTimeout(() => {
+        el.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => el.remove(), 300);
+      }, 3200);
+    }
+
+    function openModal(modalId) {
+      document.getElementById('modal-backdrop').classList.remove('hidden');
+      document.querySelectorAll('.modal-box').forEach(b => b.classList.add('hidden'));
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeAllModals() {
+      stopQrScanner();
+      document.getElementById('modal-backdrop').classList.add('hidden');
+      document.querySelectorAll('.modal-box').forEach(b => b.classList.add('hidden'));
+    }
+
+    function showConfirmModal(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      const btn = document.getElementById('confirm-accept-btn');
+      const cloned = btn.cloneNode(true);
+      btn.parentNode.replaceChild(cloned, btn);
+      cloned.addEventListener('click', () => {
+        closeAllModals();
+        onConfirm();
+      });
+      openModal('modal-confirm');
+    }
+
+    // Copiar al portapapeles compatible con iframes (execCommand)
+    function copyToClipboard(text, successMsg = 'Copiado al portapapeles') {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showToast(successMsg, 'gold');
+      } catch (e) {
+        showToast('No se pudo copiar automáticamente.', 'error');
+      }
+    }
+
+    /* =====================================================================
+       5. NAVEGACIÓN POR PESTAÑAS
+    ===================================================================== */
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const active = btn.dataset.tab === tabName;
+        btn.className = active
+          ? 'tab-btn flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-gold text-noir shadow-goldGlow'
+          : 'tab-btn flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-ivory hover:bg-white/5';
+      });
+
+      if (tabName !== 'player') {
+        pauseVideoSafely();
+      }
+      if (tabName === 'deck') {
+        renderDeckList();
+      } else if (tabName === 'print') {
+        renderPrintPreview();
+      } else if (tabName === 'table') {
+        renderPlayers();
+      }
+    }
+
+    /* =====================================================================
+       6. PARSER DE ENLACES DE YOUTUBE (SOPORTA WATCH, YOUTU.BE, SHORTS, ID)
+    ===================================================================== */
+    function extractYoutubeData(input) {
+      const raw = String(input || '').trim();
+      if (!raw) return { id: '', startSec: null };
+
+      // ID directo de 11 caracteres
+      if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) {
+        return { id: raw, startSec: null };
+      }
+
+      let id = '';
+      let startSec = null;
+
+      try {
+        const url = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
+        const host = url.hostname.replace('www.', '');
+
+        if (host === 'youtu.be') {
+          id = url.pathname.slice(1).split('/')[0];
+        } else if (host.includes('youtube.com') || host.includes('youtube-nocookie.com')) {
+          if (url.searchParams.get('v')) {
+            id = url.searchParams.get('v');
+          } else {
+            const parts = url.pathname.split('/').filter(Boolean);
+            const markerIdx = parts.findIndex(p => ['shorts', 'embed', 'live', 'v'].includes(p));
+            if (markerIdx !== -1 && parts[markerIdx + 1]) {
+              id = parts[markerIdx + 1];
+            }
+          }
+        }
+
+        // Extraer tiempo inicial (?t=45 o ?t=1m20s) si existe
+        const tParam = url.searchParams.get('t') || url.searchParams.get('start');
+        if (tParam) {
+          if (/^\d+$/.test(tParam)) {
+            startSec = parseInt(tParam, 10);
+          } else {
+            const m = tParam.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/);
+            if (m) {
+              const sec = (parseInt(m[1] || 0, 10) * 3600) + (parseInt(m[2] || 0, 10) * 60) + parseInt(m[3] || 0, 10);
+              if (sec > 0) startSec = sec;
+            }
+          }
+        }
+      } catch (e) {
+        const regex = /(?:v=|\/shorts\/|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/;
+        const match = raw.match(regex);
+        if (match) id = match[1];
+      }
+
+      id = (id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+      if (id.length !== 11) id = '';
+      return { id, startSec };
+    }
+
+    /* =====================================================================
+       7. CARGA Y GESTIÓN DE YOUTUBE IFRAME PLAYER API
+    ===================================================================== */
+    function loadYouTubeApi() {
+      if (window.YT && window.YT.Player) {
+        ytApiReady = true;
+        initYouTubePlayerInstance();
+        return;
+      }
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      ytApiReady = true;
+      initYouTubePlayerInstance();
+    };
+
+    function initYouTubePlayerInstance() {
+      if (ytPlayer || !ytApiReady) return;
+      try {
+        const playerVars = {
+          controls: 0,
+          rel: 0,
+          modestbranding: 1,
+          fs: 0,
+          iv_load_policy: 3,
+          disablekb: 1,
+          playsinline: 1,
+          showinfo: 0
+        };
+        if (window.location.protocol.startsWith('http')) {
+          playerVars.origin = window.location.origin;
+        }
+
+        ytPlayer = new YT.Player('yt-player-mount', {
+          width: '100%',
+          height: '100%',
+          playerVars,
+          events: {
+            onReady: () => {
+              ytPlayerReady = true;
+              if (pendingVideoCard) {
+                const c = pendingVideoCard;
+                pendingVideoCard = null;
+                cueVideoForCard(c, false);
+              }
+            },
+            onStateChange: onYtPlayerStateChange,
+            onError: onYtPlayerError
+          }
+        });
+      } catch (err) {
+        console.error('Error inicializando YouTube Player:', err);
+      }
+    }
+
+    function onYtPlayerStateChange(event) {
+      if (!window.YT) return;
+      const state = event.data;
+      if (state === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        updatePlayUiState(true);
+        startProgressPolling();
+      } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED) {
+        isPlaying = false;
+        updatePlayUiState(false);
+        stopProgressPolling();
+      } else if (state === YT.PlayerState.ENDED) {
+        isPlaying = false;
+        updatePlayUiState(false);
+        stopProgressPolling();
+        setStageStatus('Clip finalizado — Repite o Revela', 'gold');
+      }
+    }
+
+    function onYtPlayerError(event) {
+      isPlaying = false;
+      updatePlayUiState(false);
+      stopProgressPolling();
+      const code = event.data;
+      let msg = 'YouTube no permitió reproducir este clip dentro de la app.';
+      if (code === 101 || code === 150) {
+        msg = `El canal propietario bloqueó la reproducción incrustada (Código ${code}). Reemplaza el enlace por otro clip en el Gestor en 10 segundos o ábrelo en modo Proyeccionista.`;
+      } else if (code === 100) {
+        msg = 'Este video fue eliminado o marcado como privado en YouTube (Código 100). Actualiza su enlace en el Gestor sin reimprimir tu tarjeta.';
+      } else if (code === 2) {
+        msg = 'El ID del video de YouTube no es válido (Código 2). Verifica el enlace en el Gestor.';
+      }
+      document.getElementById('embed-error-msg').textContent = msg;
+      document.getElementById('embed-error-overlay').classList.remove('hidden');
+      setStageStatus('Error de YouTube (' + code + ')', 'error');
+    }
+
+    function pauseVideoSafely() {
+      try {
+        if (ytPlayer && ytPlayerReady && typeof ytPlayer.pauseVideo === 'function') {
+          ytPlayer.pauseVideo();
+        }
+      } catch (e) {}
+      isPlaying = false;
+      updatePlayUiState(false);
+      stopProgressPolling();
+    }
+
+    function cueVideoForCard(card, autoplay = false) {
+      if (!card || !card.youtubeId) return;
+      if (!ytPlayerReady || !ytPlayer) {
+        pendingVideoCard = card;
+        return;
+      }
+      const start = Math.max(0, Number(card.startSec) || 0);
+      const end = Math.max(start + 5, Number(card.endSec) || (start + 30));
+
+      try {
+        document.getElementById('embed-error-overlay').classList.add('hidden');
+        const payload = {
+          videoId: card.youtubeId,
+          startSeconds: start,
+          endSeconds: end
+        };
+        if (autoplay) {
+          ytPlayer.loadVideoById(payload);
+        } else {
+          ytPlayer.cueVideoById(payload);
+        }
+        updateProgressDisplay(0, end - start, start, end);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function startProgressPolling() {
+      stopProgressPolling();
+      progressInterval = setInterval(() => {
+        if (!ytPlayer || !ytPlayerReady || !currentCard) return;
+        try {
+          const start = Math.max(0, Number(currentCard.startSec) || 0);
+          const end = Math.max(start + 5, Number(currentCard.endSec) || (start + 30));
+          const duration = end - start;
+          const now = ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : start;
+          const elapsed = Math.max(0, Math.min(duration, now - start));
+
+          updateProgressDisplay(elapsed, duration, start, end);
+
+          if (now >= end - 0.15) {
+            ytPlayer.pauseVideo();
+            isPlaying = false;
+            updatePlayUiState(false);
+            stopProgressPolling();
+            updateProgressDisplay(duration, duration, start, end);
+            setStageStatus('Fin del fragmento — ¡Hora de decidir!', 'gold');
+          }
+        } catch (e) {}
+      }, 200);
+    }
+
+    function stopProgressPolling() {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+    }
+
+    function formatMMSS(totalSec) {
+      const s = Math.max(0, Math.floor(totalSec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function updateProgressDisplay(elapsed, duration, start, end) {
+      const pct = duration > 0 ? Math.min(100, Math.max(0, (elapsed / duration) * 100)) : 0;
+      document.getElementById('clip-progress-bar').style.width = `${pct}%`;
+      document.getElementById('clip-elapsed-label').textContent = formatMMSS(elapsed);
+      document.getElementById('clip-duration-label').textContent = formatMMSS(duration);
+      document.getElementById('clip-range-label').textContent = `Fragmento: ${start}s – ${end}s`;
+      document.getElementById('letterbox-time-readout').textContent = `${formatMMSS(elapsed)} / ${formatMMSS(duration)}`;
+    }
+
+    function updatePlayUiState(playing) {
+      document.getElementById('icon-play').classList.toggle('hidden', playing);
+      document.getElementById('icon-pause').classList.toggle('hidden', !playing);
+      document.getElementById('label-play-pause').textContent = playing ? 'Pausar' : 'Reproducir';
+
+      const reel = document.getElementById('cinema-reel-icon');
+      const eq = document.getElementById('audio-eq');
+      if (playing) {
+        reel.classList.remove('reel-paused');
+        eq.classList.remove('eq-paused');
+        setStageStatus(playMode === 'cinefilo' ? 'Reproduciendo solo audio...' : 'Proyectando clip sin spoilers', 'live');
+      } else {
+        reel.classList.add('reel-paused');
+        eq.classList.add('eq-paused');
+      }
+    }
+
+    /* =====================================================================
+       8. MÓDULO 1: LÓGICA DEL REPRODUCTOR SIN SPOILERS Y ESCÁNER QR
+    ===================================================================== */
+    function setStageStatus(text, tone = 'neutral') {
+      const pill = document.getElementById('stage-status-pill');
+      const styles = {
+        neutral: 'bg-slate-800 text-slate-300 border-white/10',
+        live: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        gold: 'bg-gold/20 text-goldSoft border-gold/40',
+        error: 'bg-crimson/20 text-rose-200 border-crimson/40'
+      };
+      pill.className = `text-xs font-semibold px-2.5 py-1 rounded-full border ${styles[tone] || styles.neutral}`;
+      pill.textContent = text;
+    }
+
+    function loadCard(cardId, autoplay = false) {
+      const padded = padCardId(cardId);
+      const found = deck.find(m => padCardId(m.id) === padded);
+      if (!found) {
+        showToast(`No se encontró la tarjeta #${padded || cardId} en el mazo.`, 'error');
+        return false;
+      }
+
+      pauseVideoSafely();
+      currentCard = found;
+      isRevealed = false;
+      usedCardIds.add(found.id);
+      updateSessionDeckStats();
+
+      // Sincronizar input y badges sin revelar nada de la película
+      document.getElementById('quick-card-id').value = found.id;
+      document.getElementById('stage-card-badge').textContent = `TARJETA #${found.id}`;
+      document.getElementById('mystery-card-id').textContent = `#${found.id}`;
+
+      // Preparar reverso oculto (no visible hasta girar)
+      document.getElementById('reveal-card-id').textContent = `#${found.id}`;
+      document.getElementById('reveal-genre').textContent = `${getGenreIcon(found.genre)} ${found.genre}`;
+      document.getElementById('reveal-title').textContent = found.title;
+      document.getElementById('reveal-year').textContent = found.year;
+      document.getElementById('reveal-director').textContent = found.director;
+      document.getElementById('reveal-lead').textContent = found.lead;
+      document.getElementById('reveal-scene').textContent = found.scene;
+
+      // Resetear tarjeta 3D a boca abajo
+      document.getElementById('reveal-card-inner').classList.remove('is-flipped');
+      const revealBtn = document.getElementById('btn-reveal-answer');
+      revealBtn.disabled = false;
+      document.getElementById('label-reveal-btn').textContent = 'Revelar Respuesta';
+
+      // Limpiar overlays
+      document.getElementById('empty-stage-overlay').classList.add('hidden');
+      document.getElementById('clue-mode-overlay').classList.add('hidden');
+      document.getElementById('embed-error-overlay').classList.add('hidden');
+      document.getElementById('inline-yt-url').value = '';
+
+      const controlsBox = document.getElementById('custom-player-controls');
+
+      if (found.youtubeId) {
+        // Mostrar reproductor blindado con Letterbox
+        document.getElementById('no-clip-overlay').classList.add('hidden');
+        document.getElementById('yt-stage-layer').classList.remove('hidden');
+        document.getElementById('anti-spoiler-shield').classList.remove('hidden');
+        document.getElementById('letterbox-top').classList.remove('hidden');
+        document.getElementById('letterbox-bottom').classList.remove('hidden');
+        controlsBox.classList.remove('opacity-50', 'pointer-events-none');
+        applyPlayModeOverlay();
+
+        setStageStatus('Clip listo — Pulsa Reproducir', 'gold');
+        cueVideoForCard(found, autoplay);
+      } else {
+        // Mostrar vista elegante sin enlace
+        document.getElementById('yt-stage-layer').classList.add('hidden');
+        document.getElementById('anti-spoiler-shield').classList.add('hidden');
+        document.getElementById('letterbox-top').classList.add('hidden');
+        document.getElementById('letterbox-bottom').classList.add('hidden');
+        document.getElementById('audio-only-overlay').classList.add('hidden');
+        document.getElementById('no-clip-overlay').classList.remove('hidden');
+        controlsBox.classList.add('opacity-50', 'pointer-events-none');
+        setStageStatus('Sin clip vinculado', 'neutral');
+      }
+
+      return true;
+    }
+
+    function loadCardByInput() {
+      const val = document.getElementById('quick-card-id').value;
+      if (!val.trim()) {
+        showToast('Escribe un número de tarjeta (ej. 016).', 'info');
+        return;
+      }
+      loadCard(val, false);
+    }
+
+    function getEligibleRandomPool() {
+      const onlyLinked = document.getElementById('random-only-linked').checked;
+      return deck.filter(m => !onlyLinked || Boolean(m.youtubeId));
+    }
+
+    function updateSessionDeckStats() {
+      const pool = getEligibleRandomPool();
+      const remaining = pool.filter(m => !usedCardIds.has(m.id)).length;
+      document.getElementById('deck-remaining-label').textContent = `Quedan: ${remaining}/${pool.length}`;
+    }
+
+    function drawRandomCard() {
+      const pool = getEligibleRandomPool();
+      if (pool.length === 0) {
+        showToast('No hay tarjetas con clip vinculado todavía. Desmarca "Solo con clip listo" o vincula clips en el Gestor.', 'gold');
+        return;
+      }
+      let available = pool.filter(m => !usedCardIds.has(m.id));
+      if (available.length === 0) {
+        usedCardIds.clear();
+        available = pool;
+        showToast('¡Se completó el mazo! Barajando tarjetas automáticamente.', 'gold');
+      }
+      const picked = available[Math.floor(Math.random() * available.length)];
+      loadCard(picked.id, false);
+      showToast(`Tarjeta #${picked.id} lista en proyección.`, 'info');
+    }
+
+    function resetSessionDeck() {
+      usedCardIds.clear();
+      updateSessionDeckStats();
+      showToast('Mazo barajado de nuevo.', 'gold');
+    }
+
+    function setPlayMode(mode) {
+      playMode = mode;
+      const btnTaq = document.getElementById('mode-taquilla-btn');
+      const btnCin = document.getElementById('mode-cinefilo-btn');
+      if (mode === 'taquilla') {
+        btnTaq.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-gold text-noir';
+        btnCin.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-ivory';
+      } else {
+        btnCin.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-gold text-noir';
+        btnTaq.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-ivory';
+      }
+      applyPlayModeOverlay();
+    }
+
+    function applyPlayModeOverlay() {
+      const overlay = document.getElementById('audio-only-overlay');
+      if (currentCard && currentCard.youtubeId && playMode === 'cinefilo') {
+        overlay.classList.remove('hidden');
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function togglePlayPause() {
+      if (!currentCard || !currentCard.youtubeId) return;
+      if (!ytPlayer || !ytPlayerReady) {
+        showToast('Cargando reproductor de YouTube, intenta de nuevo en un segundo...', 'info');
+        return;
+      }
+      try {
+        if (isPlaying) {
+          ytPlayer.pauseVideo();
+        } else {
+          const start = Math.max(0, Number(currentCard.startSec) || 0);
+          const end = Math.max(start + 5, Number(currentCard.endSec) || (start + 30));
+          const now = ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : start;
+          if (now >= end - 0.5 || now < start - 1) {
+            ytPlayer.seekTo(start, true);
+          }
+          ytPlayer.playVideo();
+        }
+      } catch (e) {
+        showToast('No se pudo controlar el video.', 'error');
+      }
+    }
+
+    function restartClip() {
+      if (!currentCard || !currentCard.youtubeId || !ytPlayer || !ytPlayerReady) return;
+      const start = Math.max(0, Number(currentCard.startSec) || 0);
+      try {
+        ytPlayer.seekTo(start, true);
+        ytPlayer.playVideo();
+      } catch (e) {}
+    }
+
+    function toggleMute() {
+      if (!ytPlayer || !ytPlayerReady) return;
+      try {
+        isMuted = !isMuted;
+        if (isMuted) ytPlayer.mute();
+        else ytPlayer.unMute();
+        document.getElementById('icon-vol-on').classList.toggle('hidden', isMuted);
+        document.getElementById('icon-vol-off').classList.toggle('hidden', !isMuted);
+        document.getElementById('label-mute').textContent = isMuted ? 'Silenciado' : 'Sonido';
+      } catch (e) {}
+    }
+
+    function toggleRevealCard() {
+      if (!currentCard) return;
+      isRevealed = !isRevealed;
+      document.getElementById('reveal-card-inner').classList.toggle('is-flipped', isRevealed);
+      document.getElementById('label-reveal-btn').textContent = isRevealed ? 'Ocultar Tarjeta' : 'Revelar Respuesta';
+      if (isRevealed) {
+        playRevealChime();
+      }
+    }
+
+    // Funciones de ayuda cuando la tarjeta no tiene enlace o da error de incrustación
+    function buildYoutubeSearchUrl(card) {
+      const q = encodeURIComponent(`${card.title} ${card.scene} escena clip`);
+      return `https://www.youtube.com/results?search_query=${q}`;
+    }
+
+    function searchCurrentCardOnYoutube() {
+      if (!currentCard) return;
+      window.open(buildYoutubeSearchUrl(currentCard), '_blank', 'noopener');
+    }
+
+    function linkInlineYoutube() {
+      if (!currentCard) return;
+      const raw = document.getElementById('inline-yt-url').value;
+      const parsed = extractYoutubeData(raw);
+      if (!parsed.id) {
+        showToast('Pega un enlace válido de YouTube (watch, youtu.be, shorts o ID de 11 caracteres).', 'error');
+        return;
+      }
+      currentCard.youtubeId = parsed.id;
+      if (parsed.startSec !== null) {
+        currentCard.startSec = parsed.startSec;
+        currentCard.endSec = parsed.startSec + 30;
+      }
+      saveDeckToStorage();
+      showToast(`Clip vinculado a Tarjeta #${currentCard.id}. ¡Proyectando!`, 'success');
+      loadCard(currentCard.id, true);
+    }
+
+    function activateClueMode() {
+      if (!currentCard) return;
+      pauseVideoSafely();
+      // Ocultar el título si apareciera literal dentro de la descripción de la escena
+      let safeClue = currentCard.scene;
+      try {
+        const titleWords = currentCard.title.split(':')[0].trim();
+        if (titleWords.length >= 4) {
+          const re = new RegExp(titleWords.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+          safeClue = safeClue.replace(re, '████');
+        }
+      } catch (e) {}
+
+      document.getElementById('no-clip-overlay').classList.add('hidden');
+      document.getElementById('embed-error-overlay').classList.add('hidden');
+      document.getElementById('clue-scene-text').textContent = safeClue;
+      document.getElementById('clue-genre-pill').textContent = `${getGenreIcon(currentCard.genre)} Género: ${currentCard.genre}`;
+      document.getElementById('clue-mode-overlay').classList.remove('hidden');
+      setStageStatus('Modo Pista activo', 'gold');
+    }
+
+    function exitClueMode() {
+      document.getElementById('clue-mode-overlay').classList.add('hidden');
+      if (currentCard && !currentCard.youtubeId) {
+        document.getElementById('no-clip-overlay').classList.remove('hidden');
+      }
+    }
+
+    function editCurrentCardInDeck() {
+      if (!currentCard) return;
+      const targetId = currentCard.id;
+      switchTab('deck');
+      document.getElementById('deck-search').value = targetId;
+      renderDeckList();
+      showToast(`Edita aquí el enlace de la Tarjeta #${targetId}.`, 'gold');
+    }
+
+    function openCurrentVideoExternally() {
+      if (!currentCard || !currentCard.youtubeId) return;
+      const start = Math.max(0, Number(currentCard.startSec) || 0);
+      window.open(`https://www.youtube.com/watch?v=${currentCard.youtubeId}&t=${start}s`, '_blank', 'noopener');
+    }
+
+    // Escáner QR usando html5-qrcode
+    function openQrScanner() {
+      openModal('modal-qr');
+      const errBox = document.getElementById('qr-error-box');
+      errBox.classList.add('hidden');
+      const mount = document.getElementById('qr-reader-container');
+      mount.innerHTML = '';
+
+      if (typeof Html5Qrcode === 'undefined') {
+        errBox.textContent = 'La librería del escáner no pudo cargarse (revisa tu conexión). Puedes escribir el número de tarjeta manualmente.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        html5QrScanner = new Html5Qrcode('qr-reader-container');
+        html5QrScanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 210, height: 210 } },
+          (decodedText) => {
+            const cardId = parseCardIdFromQrText(decodedText);
+            if (cardId) {
+              closeAllModals();
+              switchTab('player');
+              loadCard(cardId, true);
+              showToast(`¡QR escaneado! Tarjeta #${cardId} cargada.`, 'success');
+            } else {
+              showToast('QR detectado, pero no corresponde a una tarjeta CINEHIT.', 'error');
+            }
+          },
+          () => {}
+        ).catch((err) => {
+          errBox.innerHTML = `<strong>No se pudo abrir la cámara.</strong> Asegúrate de conceder permiso de cámara y abrir CINEHIT bajo HTTPS (o localhost). También puedes usar la cámara normal de tu celular o escribir el ID de la tarjeta.`;
+          errBox.classList.remove('hidden');
+          mount.innerHTML = '<p class="text-xs text-slate-500 p-6 text-center">Cámara no disponible en este entorno.</p>';
+        });
+      } catch (e) {
+        errBox.textContent = 'Error al iniciar la cámara. Ingresa el ID manualmente.';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function stopQrScanner() {
+      if (html5QrScanner) {
+        try {
+          if (html5QrScanner.isScanning) {
+            html5QrScanner.stop().then(() => html5QrScanner.clear()).catch(() => {});
+          } else {
+            html5QrScanner.clear();
+          }
+        } catch (e) {}
+        html5QrScanner = null;
+      }
+    }
+
+    function parseCardIdFromQrText(text) {
+      const str = String(text || '').trim();
+      const queryMatch = str.match(/[?#&]card=(\d{1,4})/i);
+      if (queryMatch) return padCardId(queryMatch[1]);
+      if (/^\d{1,4}$/.test(str)) return padCardId(str);
+      return null;
+    }
+
+    // Detección automática por URL (?card=016 o #card=016)
+    function checkUrlForCard() {
+      const searchParams = new URLSearchParams(window.location.search);
+      let cardParam = searchParams.get('card');
+      if (!cardParam && window.location.hash) {
+        const hashMatch = window.location.hash.match(/card=(\d{1,4})/i);
+        if (hashMatch) cardParam = hashMatch[1];
+      }
+      if (cardParam) {
+        switchTab('player');
+        loadCard(cardParam, false);
+      }
+    }
+
+    /* =====================================================================
+       9. MÓDULO 2: GESTOR DE MAZO, CSV, JSON Y GOOGLE SHEETS EN VIVO
+    ===================================================================== */
+    function loadDeckFromStorage() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.DECK);
+        const savedVersion = localStorage.getItem(STORAGE_KEYS.DECK_VERSION);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (savedVersion === BASE_DECK_VERSION) {
+              deck = parsed.map(normalizeMovieRecord);
+              return;
+            }
+            // Se publicó un mazo base más nuevo: se toma completo (clips reparados incluidos)
+            // y solo se conservan las tarjetas extra que este dispositivo haya creado.
+            const baseIds = new Set(BASE_MOVIES.map(m => m.id));
+            const extras = parsed.map(normalizeMovieRecord).filter(m => !baseIds.has(m.id));
+            deck = BASE_MOVIES.map(m => ({ ...m })).concat(extras);
+            saveDeckToStorage();
+            return;
+          }
+        }
+      } catch (e) {}
+      deck = BASE_MOVIES.map(m => ({ ...m }));
+      saveDeckToStorage();
+    }
+
+    function normalizeMovieRecord(m, idx = 0) {
+      return {
+        id: padCardId(m.id || (idx + 1)),
+        year: Number(m.year) || 2000,
+        title: String(m.title || 'Sin título').trim(),
+        director: String(m.director || 'Desconocido').trim(),
+        lead: String(m.lead || 'Desconocido').trim(),
+        genre: String(m.genre || 'Cine').trim(),
+        scene: String(m.scene || '').trim(),
+        youtubeId: extractYoutubeData(m.youtubeId || m.youtube || m.link || '').id,
+        startSec: Math.max(0, Number(m.startSec ?? m.start ?? 0) || 0),
+        endSec: Math.max(5, Number(m.endSec ?? m.end ?? 30) || 30)
+      };
+    }
+
+    function saveDeckToStorage() {
+      deck.sort((a, b) => Number(a.id) - Number(b.id));
+      try {
+        localStorage.setItem(STORAGE_KEYS.DECK, JSON.stringify(deck));
+        localStorage.setItem(STORAGE_KEYS.DECK_VERSION, BASE_DECK_VERSION);
+      } catch (e) {}
+      updateDeckKPIs();
+      updateSessionDeckStats();
+    }
+
+    function updateDeckKPIs() {
+      const total = deck.length;
+      const linked = deck.filter(m => Boolean(m.youtubeId)).length;
+      const pending = total - linked;
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-linked').textContent = linked;
+      document.getElementById('kpi-pending').textContent = pending;
+      document.getElementById('mobile-clips-badge').textContent = `${linked}/${total} clips`;
+    }
+
+    function renderDeckList() {
+      const container = document.getElementById('deck-list-container');
+      const query = (document.getElementById('deck-search').value || '').toLowerCase().trim();
+      const decade = document.getElementById('deck-filter-decade').value;
+      const status = document.getElementById('deck-filter-status').value;
+
+      const filtered = deck.filter(m => {
+        if (status === 'linked' && !m.youtubeId) return false;
+        if (status === 'missing' && m.youtubeId) return false;
+        if (decade !== 'all') {
+          const [minY, maxY] = decade.split('-').map(Number);
+          if (m.year < minY || m.year > maxY) return false;
+        }
+        if (query) {
+          const hay = `${m.id} ${m.year} ${m.title} ${m.director} ${m.lead} ${m.genre} ${m.scene}`.toLowerCase();
+          if (!hay.includes(query)) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-graphite rounded-2xl border border-white/10 p-10 text-center text-slate-400">
+            <p class="font-display text-2xl text-ivory">SIN RESULTADOS</p>
+            <p class="text-xs mt-1">Prueba cambiando los filtros o limpia la barra de búsqueda.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(m => {
+        const hasClip = Boolean(m.youtubeId);
+        return `
+        <div class="bg-graphite rounded-2xl border ${hasClip ? 'border-emerald-500/25' : 'border-white/10'} p-4 transition hover:border-gold/35">
+          <div class="flex flex-col xl:flex-row xl:items-center gap-3.5 justify-between">
+            <!-- Datos de la película -->
+            <div class="flex items-start gap-3 min-w-0 xl:w-5/12">
+              <div class="shrink-0 w-14 text-center rounded-xl bg-noir border border-gold/25 py-1.5">
+                <span class="block text-[10px] font-mono text-slate-400">#${escapeHtml(m.id)}</span>
+                <span class="block font-display text-2xl text-gold leading-none">${m.year}</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h4 class="font-bold text-ivory text-sm sm:text-base truncate">${escapeHtml(m.title)}</h4>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${hasClip ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-300 border border-amber-500/25'}">
+                    ${hasClip ? '✅ Clip listo' : '⏳ Sin clip'}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5 truncate">
+                  <strong>Dir:</strong> ${escapeHtml(m.director)} · <strong>Prota:</strong> ${escapeHtml(m.lead)} · ${getGenreIcon(m.genre)} ${escapeHtml(m.genre)}
+                </p>
+                <p class="text-xs text-goldSoft/90 mt-1 line-clamp-1">🎬 ${escapeHtml(m.scene)}</p>
+              </div>
+            </div>
+
+            <!-- Controles rápidos de YouTube + Inicio/Fin -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 xl:w-5/12">
+              <div class="flex-1 relative">
+                <input
+                  type="text"
+                  value="${escapeHtml(m.youtubeId)}"
+                  onchange="quickUpdateYoutube('${m.id}', this.value)"
+                  placeholder="Pegar link o ID de YouTube..."
+                  class="w-full px-3 py-2 rounded-xl bg-noir border ${hasClip ? 'border-emerald-500/35 text-emerald-200' : 'border-white/15 text-ivory'} font-mono text-xs placeholder-slate-500 focus:outline-none focus:border-gold"
+                />
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <label class="flex items-center gap-1 bg-noir px-2 py-1.5 rounded-xl border border-white/10 text-[11px] text-slate-400">
+                  <span>Ini</span>
+                  <input type="number" min="0" value="${m.startSec}" onchange="quickUpdateTiming('${m.id}', 'startSec', this.value)" class="w-11 bg-transparent text-ivory font-mono text-right focus:outline-none" />
+                  <span>s</span>
+                </label>
+                <label class="flex items-center gap-1 bg-noir px-2 py-1.5 rounded-xl border border-white/10 text-[11px] text-slate-400">
+                  <span>Fin</span>
+                  <input type="number" min="5" value="${m.endSec}" onchange="quickUpdateTiming('${m.id}', 'endSec', this.value)" class="w-11 bg-transparent text-ivory font-mono text-right focus:outline-none" />
+                  <span>s</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex items-center gap-1.5 shrink-0 justify-end">
+              <a href="${buildYoutubeSearchUrl(m)}" target="_blank" rel="noopener" title="Buscar esta escena en YouTube" class="px-2.5 py-2 rounded-xl bg-crimson/15 hover:bg-crimson/30 text-rose-200 border border-crimson/30 text-xs font-bold transition">
+                YT 🔍
+              </a>
+              <button onclick="testCardInPlayer('${m.id}')" title="Probar en el Reproductor Sin Spoilers" class="px-3 py-2 rounded-xl bg-gold/15 hover:bg-gold hover:text-noir text-gold border border-gold/30 text-xs font-bold transition">
+                ▶ Probar
+              </button>
+              <button onclick="openMovieModal('${m.id}')" title="Editar detalles" class="p-2 rounded-xl bg-noir hover:bg-graphiteLight border border-white/10 text-slate-300 hover:text-ivory transition">
+                ✏️
+              </button>
+              <button onclick="confirmDeleteMovie('${m.id}')" title="Eliminar tarjeta" class="p-2 rounded-xl bg-noir hover:bg-crimson/25 border border-white/10 text-slate-400 hover:text-rose-200 transition">
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function quickUpdateYoutube(id, rawValue) {
+      const card = deck.find(m => m.id === id);
+      if (!card) return;
+      if (!rawValue.trim()) {
+        card.youtubeId = '';
+        saveDeckToStorage();
+        renderDeckList();
+        showToast(`Clip eliminado de #${id}.`, 'info');
+        return;
+      }
+      const parsed = extractYoutubeData(rawValue);
+      if (!parsed.id) {
+        showToast('No se reconoció un enlace o ID válido de YouTube.', 'error');
+        renderDeckList();
+        return;
+      }
+      card.youtubeId = parsed.id;
+      if (parsed.startSec !== null && card.startSec === 0) {
+        card.startSec = parsed.startSec;
+        card.endSec = parsed.startSec + 30;
+      }
+      saveDeckToStorage();
+      renderDeckList();
+      showToast(`Video ${parsed.id} guardado en #${id}.`, 'success');
+    }
+
+    function quickUpdateTiming(id, field, val) {
+      const card = deck.find(m => m.id === id);
+      if (!card) return;
+      const num = Math.max(0, parseInt(val, 10) || 0);
+      card[field] = num;
+      if (card.endSec <= card.startSec) {
+        card.endSec = card.startSec + 30;
+      }
+      saveDeckToStorage();
+    }
+
+    function testCardInPlayer(id) {
+      switchTab('player');
+      loadCard(id, true);
+    }
+
+    // Modal Agregar / Editar Película
+    function openMovieModal(editId = null) {
+      const titleEl = document.getElementById('modal-movie-title');
+      if (editId) {
+        const m = deck.find(x => x.id === editId);
+        if (!m) return;
+        titleEl.textContent = `EDITAR TARJETA #${m.id}`;
+        document.getElementById('form-original-id').value = m.id;
+        document.getElementById('form-id').value = m.id;
+        document.getElementById('form-year').value = m.year;
+        document.getElementById('form-genre').value = m.genre;
+        document.getElementById('form-title').value = m.title;
+        document.getElementById('form-director').value = m.director;
+        document.getElementById('form-lead').value = m.lead;
+        document.getElementById('form-scene').value = m.scene;
+        document.getElementById('form-youtube').value = m.youtubeId || '';
+        document.getElementById('form-start').value = m.startSec;
+        document.getElementById('form-end').value = m.endSec;
+      } else {
+        const maxId = deck.reduce((max, x) => Math.max(max, parseInt(x.id, 10) || 0), 0);
+        titleEl.textContent = 'AGREGAR NUEVA PELÍCULA';
+        document.getElementById('form-original-id').value = '';
+        document.getElementById('form-id').value = padCardId(maxId + 1);
+        document.getElementById('form-year').value = 2024;
+        document.getElementById('form-genre').value = 'Acción';
+        document.getElementById('form-title').value = '';
+        document.getElementById('form-director').value = '';
+        document.getElementById('form-lead').value = '';
+        document.getElementById('form-scene').value = '';
+        document.getElementById('form-youtube').value = '';
+        document.getElementById('form-start').value = 0;
+        document.getElementById('form-end').value = 30;
+      }
+      openModal('modal-movie');
+    }
+
+    function saveMovieForm(e) {
+      e.preventDefault();
+      const origId = document.getElementById('form-original-id').value;
+      const newId = padCardId(document.getElementById('form-id').value);
+      if (!newId) {
+        showToast('El ID debe contener números.', 'error');
+        return;
+      }
+      if (newId !== origId && deck.some(m => m.id === newId)) {
+        showToast(`Ya existe una tarjeta con el ID #${newId}.`, 'error');
+        return;
+      }
+      const ytParsed = extractYoutubeData(document.getElementById('form-youtube').value);
+      let startSec = Math.max(0, parseInt(document.getElementById('form-start').value, 10) || 0);
+      let endSec = Math.max(5, parseInt(document.getElementById('form-end').value, 10) || 30);
+      if (endSec <= startSec) endSec = startSec + 30;
+
+      const record = {
+        id: newId,
+        year: parseInt(document.getElementById('form-year').value, 10),
+        genre: document.getElementById('form-genre').value.trim(),
+        title: document.getElementById('form-title').value.trim(),
+        director: document.getElementById('form-director').value.trim(),
+        lead: document.getElementById('form-lead').value.trim(),
+        scene: document.getElementById('form-scene').value.trim(),
+        youtubeId: ytParsed.id,
+        startSec,
+        endSec
+      };
+
+      if (origId) {
+        const idx = deck.findIndex(m => m.id === origId);
+        if (idx !== -1) deck[idx] = record;
+      } else {
+        deck.push(record);
+      }
+
+      saveDeckToStorage();
+      closeAllModals();
+      renderDeckList();
+      showToast(`Tarjeta #${record.id} ("${record.title}") guardada.`, 'success');
+    }
+
+    function confirmDeleteMovie(id) {
+      const m = deck.find(x => x.id === id);
+      if (!m) return;
+      showConfirmModal(
+        'ELIMINAR TARJETA',
+        `¿Seguro que deseas eliminar la tarjeta #${m.id} (${m.title}) de tu mazo?`,
+        () => {
+          deck = deck.filter(x => x.id !== id);
+          saveDeckToStorage();
+          renderDeckList();
+          showToast(`Tarjeta #${id} eliminada.`, 'info');
+        }
+      );
+    }
+
+    function confirmResetBaseDeck() {
+      showConfirmModal(
+        'RESTAURAR MAZO BASE (100)',
+        'Esto reemplazará tu mazo actual con las 100 películas curadas originales (1939–2025). Si ya vinculaste clips, exporta primero tu CSV o JSON.',
+        () => {
+          deck = BASE_MOVIES.map(m => ({ ...m }));
+          saveDeckToStorage();
+          renderDeckList();
+          showToast('Mazo base de 100 películas restaurado.', 'gold');
+        }
+      );
+    }
+
+    // Exportar e Importar CSV / JSON + Sincronizar Google Sheets en Vivo
+    function csvEscape(val) {
+      const s = String(val ?? '');
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    }
+
+    function exportDeckCSV() {
+      const headers = ['id', 'year', 'title', 'director', 'lead', 'genre', 'scene', 'youtubeId', 'startSec', 'endSec'];
+      const rows = [headers.join(',')];
+      deck.forEach(m => {
+        rows.push(headers.map(h => csvEscape(m[h])).join(','));
+      });
+      // BOM UTF-8 para que Excel y Google Sheets respeten acentos y ñ
+      const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      downloadBlob(blob, 'cinehit-mazo.csv');
+      showToast('CSV exportado listo para Google Sheets o Excel.', 'success');
+    }
+
+    function exportDeckJSON() {
+      const blob = new Blob([JSON.stringify(deck, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, 'cinehit-mazo.json');
+      showToast('Respaldo JSON descargado.', 'success');
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Parser RFC-4180 completo para CSV (soporta comas entre comillas y saltos)
+    function parseCSV(text) {
+      const cleanText = text.replace(/^\uFEFF/, '');
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < cleanText.length; i++) {
+        const ch = cleanText[i];
+        const next = cleanText[i + 1];
+        if (inQuotes) {
+          if (ch === '"' && next === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else {
+          if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ',') {
+            row.push(field);
+            field = '';
+          } else if (ch === '\r' && next === '\n') {
+            row.push(field);
+            rows.push(row);
+            row = [];
+            field = '';
+            i++;
+          } else if (ch === '\n' || ch === '\r') {
+            row.push(field);
+            rows.push(row);
+            row = [];
+            field = '';
+          } else {
+            field += ch;
+          }
+        }
+      }
+      if (field.length > 0 || row.length > 0) {
+        row.push(field);
+        rows.push(row);
+      }
+      return rows.filter(r => r.some(cell => cell.trim() !== ''));
+    }
+
+    function importDeckFromCSVText(csvText, sourceLabel = 'CSV') {
+      const rows = parseCSV(csvText);
+      if (rows.length < 2) {
+        showToast('El archivo CSV no contiene filas válidas.', 'error');
+        return false;
+      }
+      const headers = rows[0].map(h => h.trim().toLowerCase());
+      const findCol = (names) => headers.findIndex(h => names.includes(h));
+
+      const idxId = findCol(['id', 'tarjeta', 'codigo']);
+      const idxYear = findCol(['year', 'año', 'ano']);
+      const idxTitle = findCol(['title', 'titulo', 'título', 'pelicula', 'película']);
+      const idxDirector = findCol(['director']);
+      const idxLead = findCol(['lead', 'protagonista', 'actor']);
+      const idxGenre = findCol(['genre', 'genero', 'género']);
+      const idxScene = findCol(['scene', 'escena']);
+      const idxYt = findCol(['youtubeid', 'youtube', 'link', 'url', 'video']);
+      const idxStart = findCol(['startsec', 'start', 'inicio']);
+      const idxEnd = findCol(['endsec', 'end', 'fin']);
+
+      if (idxTitle === -1 || idxYear === -1) {
+        showToast('El CSV debe incluir al menos las columnas "title/título" y "year/año".', 'error');
+        return false;
+      }
+
+      const imported = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const title = r[idxTitle]?.trim();
+        if (!title) continue;
+        imported.push(normalizeMovieRecord({
+          id: idxId !== -1 ? r[idxId] : i,
+          year: r[idxYear],
+          title,
+          director: idxDirector !== -1 ? r[idxDirector] : '',
+          lead: idxLead !== -1 ? r[idxLead] : '',
+          genre: idxGenre !== -1 ? r[idxGenre] : 'Cine',
+          scene: idxScene !== -1 ? r[idxScene] : '',
+          youtubeId: idxYt !== -1 ? r[idxYt] : '',
+          startSec: idxStart !== -1 ? r[idxStart] : 0,
+          endSec: idxEnd !== -1 ? r[idxEnd] : 30
+        }, i - 1));
+      }
+
+      if (imported.length === 0) {
+        showToast('No se encontraron películas válidas en el CSV.', 'error');
+        return false;
+      }
+
+      deck = imported;
+      saveDeckToStorage();
+      renderDeckList();
+      showToast(`¡${imported.length} tarjetas importadas desde ${sourceLabel}!`, 'success');
+      return true;
+    }
+
+    function handleImportCSV(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => importDeckFromCSVText(e.target.result, file.name);
+      reader.readAsText(file, 'UTF-8');
+      event.target.value = '';
+    }
+
+    function handleImportJSON(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!Array.isArray(parsed) || parsed.length === 0) throw new Error();
+          deck = parsed.map(normalizeMovieRecord);
+          saveDeckToStorage();
+          renderDeckList();
+          showToast(`¡${deck.length} tarjetas cargadas desde JSON!`, 'success');
+        } catch (err) {
+          showToast('Archivo JSON inválido.', 'error');
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+      event.target.value = '';
+    }
+
+    async function syncGoogleSheet(silent = false) {
+      const urlInput = document.getElementById('google-sheet-url');
+      const url = urlInput.value.trim();
+      const statusEl = document.getElementById('sheet-sync-status');
+
+      if (!url) {
+        if (!silent) showToast('Pega primero tu enlace CSV publicado de Google Sheets.', 'info');
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEYS.SHEET_URL, url);
+      const btn = document.getElementById('btn-sync-sheet');
+      btn.disabled = true;
+      btn.textContent = 'Sincronizando...';
+
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const csvText = await res.text();
+        const ok = importDeckFromCSVText(csvText, 'Google Sheets en vivo');
+        if (ok) {
+          const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+          statusEl.innerHTML = `<span class="text-emerald-400 font-semibold">✅ Sincronizado con Google Sheets a las ${timeStr} (${deck.length} tarjetas activas).</span>`;
+        }
+      } catch (err) {
+        statusEl.innerHTML = `<span class="text-rose-300">⚠️ No se pudo descargar el CSV. Verifica que el documento esté publicado en la web en formato CSV y que sea público.</span>`;
+        if (!silent) showToast('Error al sincronizar con Google Sheets.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Sincronizar Google Sheet';
+      }
+    }
+
+
+    /* =====================================================================
+       9.b VERIFICADOR MASIVO DE CLIPS (detecta videos borrados o bloqueados)
+    ===================================================================== */
+    let verifyRunning = false;
+    function verifyAllClips() {
+      if (verifyRunning) return;
+      if (!ytApiReady || !window.YT || !YT.Player) {
+        showToast('YouTube aún no termina de cargar. Intenta en unos segundos.', 'error');
+        return;
+      }
+      const linked = deck.filter(m => Boolean(m.youtubeId));
+      if (linked.length === 0) {
+        showToast('No hay clips vinculados para verificar.', 'info');
+        return;
+      }
+      verifyRunning = true;
+      pauseVideoSafely();
+      const statusEl = document.getElementById('verify-status');
+      const results = [];
+      window.cinehitVerifyResults = results;
+      window.cinehitVerifyDone = false;
+      const REASONS = { 2: 'ID inválido', 5: 'Error de reproducción', 100: 'Eliminado o privado', 101: 'Bloqueado fuera de YouTube', 150: 'Bloqueado fuera de YouTube', 153: 'YouTube rechazó el origen', timeout: 'No respondió' };
+
+      const holder = document.createElement('div');
+      holder.style.cssText = 'position:fixed; right:12px; bottom:12px; width:240px; height:135px; z-index:9999; border-radius:12px; overflow:hidden; border:2px solid #F5B731; box-shadow:0 10px 30px rgba(0,0,0,.6);';
+      holder.innerHTML = '<div id="verify-player-mount"></div>';
+      document.body.appendChild(holder);
+
+      let idx = -1, timer = null, settled = true, vPlayer = null;
+
+      const finish = () => {
+        try { vPlayer.destroy(); } catch (e) {}
+        holder.remove();
+        verifyRunning = false;
+        window.cinehitVerifyDone = true;
+        const bad = results.filter(r => !r.ok);
+        if (bad.length === 0) {
+          statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ Los ${results.length} clips reproducen bien.</span>`;
+        } else {
+          statusEl.innerHTML = `<span class="text-rose-300 font-bold">⚠️ ${bad.length} de ${results.length} clips fallaron:</span> ` +
+            bad.map(r => `#${escapeHtml(r.id)} ${escapeHtml(r.title)} (${escapeHtml(REASONS[r.code] || ('código ' + r.code))})`).join(' · ');
+        }
+        showToast(bad.length ? `${bad.length} clips necesitan reemplazo.` : 'Todos los clips funcionan.', bad.length ? 'error' : 'success');
+      };
+
+      const settle = (ok, code) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        const c = linked[idx];
+        results.push({ id: c.id, title: c.title, youtubeId: c.youtubeId, ok, code });
+        try { vPlayer.stopVideo(); } catch (e) {}
+        setTimeout(next, 250);
+      };
+
+      const next = () => {
+        idx++;
+        if (idx >= linked.length) return finish();
+        settled = false;
+        const c = linked[idx];
+        statusEl.textContent = `Verificando clip ${idx + 1} de ${linked.length}…`;
+        try {
+          vPlayer.loadVideoById({ videoId: c.youtubeId, startSeconds: Math.max(0, Number(c.startSec) || 0) });
+        } catch (e) {
+          settle(false, 'timeout');
+          return;
+        }
+        timer = setTimeout(() => settle(false, 'timeout'), 12000);
+      };
+
+      const playerVars = { controls: 0, rel: 0, playsinline: 1, mute: 1, fs: 0, iv_load_policy: 3 };
+      if (window.location.protocol.startsWith('http')) playerVars.origin = window.location.origin;
+      vPlayer = new YT.Player('verify-player-mount', {
+        width: '240',
+        height: '135',
+        playerVars,
+        events: {
+          onReady: () => { try { vPlayer.mute(); } catch (e) {} next(); },
+          onStateChange: (ev) => {
+            if (ev.data !== YT.PlayerState.PLAYING || settled) return;
+            let vid = '';
+            try { vid = (vPlayer.getVideoData() || {}).video_id || ''; } catch (e) {}
+            if (!vid || vid === linked[idx].youtubeId) settle(true, 0);
+          },
+          onError: (ev) => settle(false, ev.data)
+        }
+      });
+    }
+
+    /* =====================================================================
+       10. MÓDULO 3: ESTUDIO DE TARJETAS IMPRIMIBLES (QR + PDF DÚPLEX)
+    ===================================================================== */
+    function getDefaultBaseUrl() {
+      if (window.location.protocol.startsWith('http')) {
+        return window.location.origin + window.location.pathname;
+      }
+      return "https://nusafi.github.io/cinehit/";
+    }
+
+    function loadPrintSettings() {
+      let cfg = {
+        baseUrl: getDefaultBaseUrl(),
+        format: 'square',
+        theme: 'gala',
+        filter: 'all',
+        from: 1,
+        to: 18,
+        mirror: true
+      };
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRINT_CFG) || 'null');
+        if (saved) cfg = { ...cfg, ...saved };
+      } catch (e) {}
+
+      document.getElementById('print-base-url').value = cfg.baseUrl;
+      document.getElementById('print-format').value = cfg.format;
+      document.getElementById('print-theme').value = cfg.theme;
+      document.getElementById('print-filter').value = cfg.filter;
+      document.getElementById('print-range-from').value = cfg.from;
+      document.getElementById('print-range-to').value = cfg.to;
+      document.getElementById('print-mirror-backs').checked = cfg.mirror;
+      togglePrintRangeInputs();
+    }
+
+    function togglePrintRangeInputs() {
+      const isRange = document.getElementById('print-filter').value === 'range';
+      document.getElementById('print-range-box').classList.toggle('hidden', !isRange);
+    }
+
+    function getPrintConfig() {
+      return {
+        baseUrl: (document.getElementById('print-base-url').value || '').trim() || getDefaultBaseUrl(),
+        format: document.getElementById('print-format').value,
+        theme: document.getElementById('print-theme').value,
+        filter: document.getElementById('print-filter').value,
+        from: parseInt(document.getElementById('print-range-from').value, 10) || 1,
+        to: parseInt(document.getElementById('print-range-to').value, 10) || 50,
+        mirror: document.getElementById('print-mirror-backs').checked
+      };
+    }
+
+    function savePrintSettingsAndRender() {
+      const cfg = getPrintConfig();
+      try {
+        localStorage.setItem(STORAGE_KEYS.PRINT_CFG, JSON.stringify(cfg));
+      } catch (e) {}
+      renderPrintPreview();
+    }
+
+    function buildCardQrUrl(baseUrl, cardId) {
+      const sep = baseUrl.includes('?') ? '&' : '?';
+      return `${baseUrl}${sep}card=${cardId}`;
+    }
+
+    function copySampleQrUrl() {
+      const cfg = getPrintConfig();
+      const sample = buildCardQrUrl(cfg.baseUrl, '001');
+      copyToClipboard(sample, 'URL de ejemplo copiada.');
+    }
+
+    function getFilteredPrintCards(cfg) {
+      return deck.filter(m => {
+        if (cfg.filter === 'linked') return Boolean(m.youtubeId);
+        if (cfg.filter === 'range') {
+          const n = parseInt(m.id, 10);
+          return n >= cfg.from && n <= cfg.to;
+        }
+        return true;
+      });
+    }
+
+    // Genera un SVG nítido de código QR usando qrcode-generator
+    function generateQrSvg(text) {
+      if (typeof qrcode === 'undefined') {
+        return `<div class="text-[10px] text-center p-2 text-slate-500">QR no disponible sin conexión</div>`;
+      }
+      try {
+        const qr = qrcode(0, 'M');
+        qr.addData(text);
+        qr.make();
+        return qr.createSvgTag({ scalable: true, margin: 2 });
+      } catch (e) {
+        return `<div class="text-[10px] text-center p-2 text-rose-500">Error QR</div>`;
+      }
+    }
+
+    function getThemeCardStyles(theme) {
+      if (theme === 'neon') {
+        return {
+          frontBg: 'background: linear-gradient(145deg, #120829 0%, #1F0F42 55%, #0D1633 100%); color: #F8FAFC; border-color: #EC4899;',
+          backBg: 'background: linear-gradient(145deg, #0D1633 0%, #1C0D38 60%, #240B36 100%); color: #F8FAFC; border-color: #22D3EE;',
+          accent: '#22D3EE',
+          yearColor: '#F472B6',
+          muted: '#CBD5E1',
+          qrBox: 'background: #FFFFFF; padding: 6px; border-radius: 10px; border: 2px solid #22D3EE;'
+        };
+      }
+      if (theme === 'inksave') {
+        return {
+          frontBg: 'background: #FFFFFF; color: #0F172A; border-color: #0F172A;',
+          backBg: 'background: #FFFFFF; color: #0F172A; border-color: #0F172A;',
+          accent: '#B45309',
+          yearColor: '#0F172A',
+          muted: '#475569',
+          qrBox: 'background: #FFFFFF; padding: 4px; border-radius: 8px; border: 1.5px solid #CBD5E1;'
+        };
+      }
+      // Gala Cine (Negro y Oro)
+      return {
+        frontBg: 'background: radial-gradient(circle at 50% 0%, #1E2438 0%, #0D1018 78%); color: #F8F5EE; border-color: #F5B731;',
+        backBg: 'background: linear-gradient(160deg, #181D2C 0%, #0B0E15 100%); color: #F8F5EE; border-color: #F5B731;',
+        accent: '#F5B731',
+        yearColor: '#F5B731',
+        muted: '#94A3B8',
+        qrBox: 'background: #FFFFFF; padding: 6px; border-radius: 10px; border: 2px solid #F5B731;'
+      };
+    }
+
+    function buildCardFrontInnerHtml(card, cfg, isPrint = false) {
+      const st = getThemeCardStyles(cfg.theme);
+      const qrUrl = buildCardQrUrl(cfg.baseUrl, card.id);
+      const qrSvg = generateQrSvg(qrUrl);
+      const isPoker = cfg.format === 'poker';
+      const qrSizeClass = isPrint
+        ? (isPoker ? 'width: 40mm; height: 40mm;' : 'width: 36mm; height: 36mm;')
+        : (isPoker ? 'width: 146px; height: 146px;' : 'width: 132px; height: 132px;');
+
+      return `
+        <div style="${st.frontBg} height:100%; width:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:${isPrint ? '4mm' : '14px'}; box-sizing:border-box; position:relative;">
+          <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:'Bebas Neue',sans-serif; letter-spacing:0.14em; font-size:${isPrint ? '11pt' : '15px'}; color:${st.accent};">CINEHIT</span>
+            <span style="font-size:${isPrint ? '9pt' : '13px'};">${getGenreIcon(card.genre)}</span>
+          </div>
+
+          <div class="qr-svg-box" style="${st.qrBox} ${qrSizeClass} display:flex; align-items:center; justify-content:center;">
+            ${qrSvg}
+          </div>
+
+          <div style="width:100%; display:flex; justify-content:space-between; align-items:center; font-family:monospace; font-size:${isPrint ? '7.5pt' : '11px'}; color:${st.muted};">
+            <span>ESCANEA EL CLIP</span>
+            <span style="font-weight:800; color:${st.accent};">#${escapeHtml(card.id)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildCardBackInnerHtml(card, cfg, isPrint = false) {
+      const st = getThemeCardStyles(cfg.theme);
+      const isPoker = cfg.format === 'poker';
+
+      return `
+        <div style="${st.backBg} height:100%; width:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; text-align:center; padding:${isPrint ? '4.5mm 3.5mm' : '16px 14px'}; box-sizing:border-box; position:relative;">
+          <div style="width:100%;">
+            <div style="font-size:${isPrint ? '6.5pt' : '10px'}; text-transform:uppercase; letter-spacing:0.14em; color:${st.accent}; font-weight:700;">
+              ${getGenreIcon(card.genre)} ${escapeHtml(card.genre)}
+            </div>
+            <div style="font-weight:800; font-size:${isPrint ? (isPoker ? '9.5pt' : '8.5pt') : '13px'}; line-height:1.15; margin-top:2px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">
+              ${escapeHtml(card.title)}
+            </div>
+          </div>
+
+          <div style="font-family:'Bebas Neue',sans-serif; font-size:${isPrint ? (isPoker ? '48pt' : '40pt') : '66px'}; line-height:0.9; color:${st.yearColor}; letter-spacing:0.04em; margin:auto 0;">
+            ${card.year}
+          </div>
+
+          <div style="width:100%; border-top:1px solid rgba(148,163,184,0.28); padding-top:${isPrint ? '2mm' : '8px'};">
+            <div style="font-size:${isPrint ? '7pt' : '11px'}; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              Dir: ${escapeHtml(card.director)}
+            </div>
+            <div style="font-size:${isPrint ? '6.8pt' : '10.5px'}; color:${st.muted}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">
+              ${escapeHtml(card.lead)}
+            </div>
+            <div style="font-family:monospace; font-size:${isPrint ? '6pt' : '9px'}; color:${st.accent}; margin-top:2px; opacity:0.85;">
+              CINEHIT #${escapeHtml(card.id)}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPrintPreview() {
+      const cfg = getPrintConfig();
+      document.getElementById('qr-url-preview').textContent = buildCardQrUrl(cfg.baseUrl, '001');
+
+      const cards = getFilteredPrintCards(cfg);
+      const sheets = Math.ceil(cards.length / 9);
+      document.getElementById('print-summary-text').textContent =
+        `Seleccionadas: ${cards.length} tarjetas · ${sheets} hoja(s) frente + ${sheets} hoja(s) reverso (${sheets * 2} páginas totales en cuadrícula 3×3).`;
+
+      const grid = document.getElementById('print-preview-grid');
+      if (cards.length === 0) {
+        grid.innerHTML = `<div class="col-span-full bg-graphite rounded-2xl border border-white/10 p-8 text-center text-slate-400 text-sm">No hay tarjetas que coincidan con este filtro de impresión.</div>`;
+        return;
+      }
+
+      const dimStyle = cfg.format === 'poker'
+        ? 'width: 220px; height: 306px;'
+        : 'width: 230px; height: 230px;';
+
+      grid.innerHTML = cards.map(card => `
+        <div class="perspective-1200 cursor-pointer group" style="${dimStyle}" onclick="this.querySelector('.flip-card-inner').classList.toggle('is-flipped')">
+          <div class="flip-card-inner">
+            <div class="flip-face rounded-2xl overflow-hidden border border-gold/40 shadow-cinemaCard">
+              ${buildCardFrontInnerHtml(card, cfg, false)}
+            </div>
+            <div class="flip-face flip-face-back rounded-2xl overflow-hidden border border-gold shadow-goldGlow">
+              ${buildCardBackInnerHtml(card, cfg, false)}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Motor de Generación PDF Dúplex (3×3 con Espejeo Exacto por Fila)
+    function generateAndPrintDeck() {
+      const cfg = getPrintConfig();
+      const cards = getFilteredPrintCards(cfg);
+      if (cards.length === 0) {
+        showToast('No hay tarjetas seleccionadas para imprimir.', 'error');
+        return;
+      }
+
+      const container = document.getElementById('print-sheet-container');
+      const sizeClass = cfg.format === 'poker' ? 'size-poker' : 'size-square';
+      const chunks = [];
+      for (let i = 0; i < cards.length; i += 9) {
+        chunks.push(cards.slice(i, i + 9));
+      }
+
+      let html = '';
+
+      chunks.forEach((chunk, pageIdx) => {
+        // Rellenar a 9 espacios para conservar alineación perfecta al espejear
+        const padded9 = [...chunk];
+        while (padded9.length < 9) padded9.push(null);
+
+        // PÁGINA IMPAR: FRENTES (QR)
+        html += `
+          <div class="print-page">
+            <div class="print-page-header">
+              <span><strong>CINEHIT</strong> · Hoja ${pageIdx + 1} de ${chunks.length} — <strong>FRENTES (Códigos QR)</strong></span>
+              <span>Formato: ${cfg.format === 'poker' ? 'Póker 6.3×8.8 cm' : 'Cuadrada 6.5×6.5 cm'} · Impresión a escala 100%</span>
+            </div>
+            <div class="print-grid">
+              ${padded9.map(c => {
+                if (!c) return `<div class="print-card-cell ${sizeClass} is-empty"></div>`;
+                return `
+                  <div class="print-card-cell ${sizeClass}">
+                    <span class="crop-mark crop-tl"></span>
+                    <span class="crop-mark crop-tr"></span>
+                    <span class="crop-mark crop-bl"></span>
+                    <span class="crop-mark crop-br"></span>
+                    ${buildCardFrontInnerHtml(c, cfg, true)}
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+
+        // PÁGINA PAR: REVERSOS (Espejeados por fila: col 1 <-> col 3 si duplex está activo)
+        let backOrder = [];
+        for (let row = 0; row < 3; row++) {
+          const rowSlice = padded9.slice(row * 3, row * 3 + 3);
+          backOrder = backOrder.concat(cfg.mirror ? rowSlice.reverse() : rowSlice);
+        }
+
+        html += `
+          <div class="print-page">
+            <div class="print-page-header">
+              <span><strong>CINEHIT</strong> · Hoja ${pageIdx + 1} de ${chunks.length} — <strong>REVERSOS (${cfg.mirror ? 'Espejeados doble cara borde largo' : 'Orden normal'})</strong></span>
+              <span>Años y Respuestas · Activa "Gráficos de fondo" al guardar PDF</span>
+            </div>
+            <div class="print-grid">
+              ${backOrder.map(c => {
+                if (!c) return `<div class="print-card-cell ${sizeClass} is-empty"></div>`;
+                return `
+                  <div class="print-card-cell ${sizeClass}">
+                    <span class="crop-mark crop-tl"></span>
+                    <span class="crop-mark crop-tr"></span>
+                    <span class="crop-mark crop-bl"></span>
+                    <span class="crop-mark crop-br"></span>
+                    ${buildCardBackInnerHtml(c, cfg, true)}
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+
+      // Dar un breve respiro al navegador para pintar los SVG antes de abrir el diálogo de impresión
+      setTimeout(() => {
+        window.print();
+      }, 150);
+    }
+
+    /* =====================================================================
+       11. MÓDULO 4: MESA DE JUEGO (JUGADORES, ¡CORTE! Y TEMPORIZADOR)
+    ===================================================================== */
+    function loadPlayers() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.PLAYERS) || 'null');
+        if (Array.isArray(saved) && saved.length > 0) {
+          players = saved;
+          return;
+        }
+      } catch (e) {}
+      players = [
+        { id: 'p1', name: 'Jugador 1', timeline: 1, tickets: 2 },
+        { id: 'p2', name: 'Jugador 2', timeline: 1, tickets: 2 },
+        { id: 'p3', name: 'Jugador 3', timeline: 1, tickets: 2 }
+      ];
+      savePlayers();
+    }
+
+    function savePlayers() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.PLAYERS, JSON.stringify(players));
+      } catch (e) {}
+    }
+
+    function renderPlayers() {
+      const grid = document.getElementById('players-grid');
+      const winner = players.find(p => p.timeline >= 10);
+      const banner = document.getElementById('winner-banner');
+
+      if (winner) {
+        document.getElementById('winner-name').textContent = `¡${winner.name.toUpperCase()} GANÓ LA FUNCIÓN!`;
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+
+      grid.innerHTML = players.map(p => {
+        const pct = Math.min(100, (p.timeline / 10) * 100);
+        const isWin = p.timeline >= 10;
+        const dots = Array.from({ length: 10 }, (_, i) =>
+          `<span class="h-2 flex-1 rounded-full ${i < p.timeline ? 'bg-gold shadow-sm' : 'bg-noir border border-white/10'}"></span>`
+        ).join('');
+
+        return `
+          <div class="bg-graphite rounded-2xl border ${isWin ? 'border-gold shadow-goldGlow' : 'border-white/10'} p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between gap-2">
+              <input
+                type="text"
+                value="${escapeHtml(p.name)}"
+                onchange="renamePlayer('${p.id}', this.value)"
+                class="bg-transparent font-bold text-lg text-ivory focus:outline-none focus:border-b focus:border-gold w-full"
+              />
+              ${players.length > 2 ? `<button onclick="removePlayer('${p.id}')" title="Quitar jugador" class="text-slate-500 hover:text-crimson text-xs px-2 py-1 rounded-lg hover:bg-noir">✕</button>` : ''}
+            </div>
+
+            <!-- Línea de Tiempo (0 a 10 películas) -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-semibold uppercase tracking-wider">Línea de Tiempo</span>
+                <span class="font-display text-2xl ${isWin ? 'text-gold' : 'text-ivory'} leading-none">${p.timeline} <span class="text-slate-500 text-base">/ 10</span></span>
+              </div>
+              <div class="flex items-center gap-1">${dots}</div>
+              <div class="flex items-center gap-2 pt-1">
+                <button onclick="updatePlayerStat('${p.id}', 'timeline', -1)" class="flex-1 py-2.5 rounded-xl bg-noir hover:bg-graphiteLight border border-white/10 font-bold text-ivory text-base active:scale-95 transition">−</button>
+                <button onclick="updatePlayerStat('${p.id}', 'timeline', 1)" class="flex-1 py-2.5 rounded-xl bg-gold/20 hover:bg-gold hover:text-noir border border-gold/40 font-bold text-gold text-base active:scale-95 transition">+ Película</button>
+              </div>
+            </div>
+
+            <!-- Boletos / Claquetas -->
+            <div class="flex items-center justify-between bg-noir/70 rounded-xl p-3 border border-white/10">
+              <div>
+                <span class="block text-[10px] uppercase tracking-wider text-slate-400 font-bold">Boletos / Claquetas</span>
+                <span class="font-display text-3xl text-goldSoft leading-none">🎟️ ${p.tickets}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="updatePlayerStat('${p.id}', 'tickets', -1)" class="w-10 h-10 rounded-xl bg-graphite hover:bg-crimson/25 border border-white/10 text-ivory font-bold text-lg active:scale-95 transition">−</button>
+                <button onclick="updatePlayerStat('${p.id}', 'tickets', 1)" class="w-10 h-10 rounded-xl bg-graphite hover:bg-gold/25 border border-gold/30 text-gold font-bold text-lg active:scale-95 transition">+</button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function addPlayer() {
+      if (players.length >= 8) {
+        showToast('Máximo 8 jugadores (pueden jugar en equipos para grupos más grandes).', 'gold');
+        return;
+      }
+      const input = document.getElementById('new-player-name');
+      const name = input.value.trim() || `Jugador ${players.length + 1}`;
+      players.push({
+        id: 'p' + Date.now(),
+        name,
+        timeline: 1,
+        tickets: 2
+      });
+      input.value = '';
+      savePlayers();
+      renderPlayers();
+      showToast(`${name} se unió a la mesa.`, 'success');
+    }
+
+    function renamePlayer(id, newName) {
+      const p = players.find(x => x.id === id);
+      if (p && newName.trim()) {
+        p.name = newName.trim();
+        savePlayers();
+      }
+    }
+
+    function removePlayer(id) {
+      if (players.length <= 2) return;
+      players = players.filter(x => x.id !== id);
+      savePlayers();
+      renderPlayers();
+    }
+
+    function updatePlayerStat(id, field, delta) {
+      const p = players.find(x => x.id === id);
+      if (!p) return;
+      if (field === 'timeline') {
+        const prev = p.timeline;
+        p.timeline = Math.max(0, Math.min(10, p.timeline + delta));
+        if (prev < 10 && p.timeline === 10) {
+          playRevealChime();
+          showToast(`🏆 ¡${p.name} completó las 10 películas y gana la partida!`, 'gold');
+        }
+      } else if (field === 'tickets') {
+        p.tickets = Math.max(0, Math.min(10, p.tickets + delta));
+      }
+      savePlayers();
+      renderPlayers();
+    }
+
+    function confirmResetScores() {
+      showConfirmModal(
+        'REINICIAR PARTIDA',
+        'Todos los jugadores volverán a 1 película inicial y 2 Boletos. Se mantendrán sus nombres.',
+        () => {
+          players.forEach(p => { p.timeline = 1; p.tickets = 2; });
+          savePlayers();
+          renderPlayers();
+          showToast('Marcadores reiniciados. ¡Nueva función!', 'gold');
+        }
+      );
+    }
+
+    function triggerCorteAction() {
+      playClapperSound();
+      openModal('modal-corte');
+    }
+
+    // Temporizador de Turno
+    function updateTimerDisplay() {
+      const el = document.getElementById('timer-display');
+      el.textContent = formatMMSS(timerRemaining);
+      if (timerRemaining <= 5 && timerRemaining > 0) {
+        el.classList.remove('text-gold');
+        el.classList.add('text-crimson', 'animate-pulse');
+      } else {
+        el.classList.add('text-gold');
+        el.classList.remove('text-crimson', 'animate-pulse');
+      }
+    }
+
+    function setTimerPreset(seconds) {
+      stopTimer();
+      timerPreset = seconds;
+      timerRemaining = seconds;
+      updateTimerDisplay();
+      document.querySelectorAll('.timer-preset').forEach(b => {
+        const active = b.textContent === `${seconds}s`;
+        b.className = active
+          ? 'timer-preset text-[10px] px-1.5 py-0.5 rounded bg-gold/20 text-gold font-bold'
+          : 'timer-preset text-[10px] px-1.5 py-0.5 rounded bg-graphite text-slate-400 hover:text-gold';
+      });
+    }
+
+    function toggleTimer() {
+      if (timerRunning) {
+        stopTimer();
+      } else {
+        if (timerRemaining <= 0) timerRemaining = timerPreset;
+        timerRunning = true;
+        document.getElementById('btn-timer-toggle').textContent = 'Pausar';
+        timerInterval = setInterval(() => {
+          timerRemaining--;
+          updateTimerDisplay();
+          if (timerRemaining <= 0) {
+            stopTimer();
+            playTimerEndChime();
+            showToast('⏰ ¡Tiempo terminado! Fija tu tarjeta en la línea de tiempo.', 'gold');
+          }
+        }, 1000);
+      }
+    }
+
+    function stopTimer() {
+      timerRunning = false;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      document.getElementById('btn-timer-toggle').textContent = 'Iniciar';
+    }
+
+    function resetTimer() {
+      stopTimer();
+      timerRemaining = timerPreset;
+      updateTimerDisplay();
+    }
+
+    /* =====================================================================
+       12. INICIALIZACIÓN DE LA APLICACIÓN
+    ===================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDeckFromStorage();
+      loadPlayers();
+      loadPrintSettings();
+      loadYouTubeApi();
+
+      // Restaurar URL de Google Sheets si existía
+      const savedSheet = localStorage.getItem(STORAGE_KEYS.SHEET_URL);
+      if (savedSheet) {
+        document.getElementById('google-sheet-url').value = savedSheet;
+      }
+
+      updateDeckKPIs();
+      updateSessionDeckStats();
+      updateTimerDisplay();
+      switchTab('player');
+
+      // Detectar si se abrió desde un QR (?card=016 o #card=016)
+      checkUrlForCard();
+
+      // Cerrar modal al hacer clic en el fondo oscuro
+      document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+        if (e.target.id === 'modal-backdrop') closeAllModals();
+      });
+
+      // Escuchar cambios en el hash por si se escanea en la misma sesión
+      window.addEventListener('hashchange', checkUrlForCard);
+    });
+  </script>
+</body>
+</html>
