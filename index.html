@@ -153,6 +153,11 @@
       padding: 0 1.25rem;
       border-top: 1px solid rgba(245, 183, 49, 0.14);
     }
+    .cinema-viewport.ad-mode .anti-spoiler-shield,
+    .cinema-viewport.ad-mode .letterbox-bottom,
+    .cinema-viewport.ad-mode #audio-only-overlay { display: none !important; }
+    .cinema-viewport.ad-mode .cinema-iframe-wrap,
+    .cinema-viewport.ad-mode .cinema-iframe-wrap iframe { pointer-events: auto; }
     .anti-spoiler-shield {
       position: absolute;
       inset: 0;
@@ -602,6 +607,9 @@
                     </button>
                   </div>
 
+                  <button id="btn-ad-skip" onclick="enableAdSkipMode()" title="Si YouTube muestra un anuncio antes del clip" class="flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-noir hover:bg-graphiteLight border border-white/10 text-slate-300 text-xs font-semibold transition">
+                    <span>⏭</span><span id="label-ad-skip">¿Anuncio?</span>
+                  </button>
                   <button id="btn-mute" onclick="toggleMute()" class="flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-noir hover:bg-graphiteLight border border-white/10 text-slate-300 text-xs font-semibold transition">
                     <svg id="icon-vol-on" class="w-4 h-4 text-gold" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                     <svg id="icon-vol-off" class="w-4 h-4 text-crimson hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
@@ -1209,7 +1217,7 @@
       { id: "023", year: 1960, title: "Psicosis", director: "Alfred Hitchcock", lead: "Anthony Perkins", genre: "Suspenso", scene: "La escena de la ducha en el Motel Bates", youtubeId: "0WtDmbr9xyY", startSec: 39, endSec: 69 },
       { id: "024", year: 1986, title: "Top Gun", director: "Tony Scott", lead: "Tom Cruise", genre: "Acción", scene: "\"Estaba invertido\": Maverick en clase con Charlie", youtubeId: "wUZxSf_P2r0", startSec: 28, endSec: 58 },
       { id: "025", year: 2016, title: "La La Land", director: "Damien Chazelle", lead: "Ryan Gosling", genre: "Musical", scene: "El número musical inicial en la autopista", youtubeId: "7CVfTd-_qbc", startSec: 40, endSec: 70 },
-      { id: "026", year: 2009, title: "¿Qué pasó ayer?", director: "Todd Phillips", lead: "Bradley Cooper", genre: "Comedia", scene: "La recepción de la boda", youtubeId: "sIbYUg1FKK4", startSec: 18, endSec: 48 },
+      { id: "026", year: 2009, title: "¿Qué pasó ayer?", director: "Todd Phillips", lead: "Bradley Cooper", genre: "Comedia", scene: "La demostración de la pistola eléctrica", youtubeId: "JZCM0ZW-GMw", startSec: 27, endSec: 57 },
       { id: "027", year: 1965, title: "La novicia rebelde", director: "Robert Wise", lead: "Julie Andrews", genre: "Musical", scene: "María enseña \"Do-Re-Mi\" a los niños", youtubeId: "pLm07s8fnzM", startSec: 26, endSec: 56 },
       { id: "028", year: 2022, title: "Top Gun: Maverick", director: "Joseph Kosinski", lead: "Tom Cruise", genre: "Acción", scene: "Maverick lleva el Darkstar a Mach 10", youtubeId: "wmzkizC6Rz4", startSec: 40, endSec: 70 },
       { id: "029", year: 2019, title: "Parásitos", director: "Bong Joon-ho", lead: "Song Kang-ho", genre: "Suspenso", scene: "Los mejores momentos de Ki-jung (\"Jessica\")", youtubeId: "iYWBGJzXvs0", startSec: 25, endSec: 55 },
@@ -1219,7 +1227,7 @@
       { id: "033", year: 2019, title: "Guasón", director: "Todd Phillips", lead: "Joaquin Phoenix", genre: "Drama", scene: "El baile en las escaleras", youtubeId: "Tl5zk46i0Bs", startSec: 3, endSec: 33 },
       { id: "034", year: 2003, title: "Escuela de rock", director: "Richard Linklater", lead: "Jack Black", genre: "Comedia", scene: "La primera lección de rock", youtubeId: "RVb5kJv4JbE", startSec: 40, endSec: 70 },
       { id: "035", year: 1999, title: "Matrix", director: "Lana y Lilly Wachowski", lead: "Keanu Reeves", genre: "Ciencia Ficción", scene: "Pastilla roja o pastilla azul", youtubeId: "zE7PKRjrid4", startSec: 30, endSec: 60 },
-      { id: "036", year: 2017, title: "Eso", director: "Andy Muschietti", lead: "Bill Skarsgård", genre: "Terror", scene: "Georgie conoce a Pennywise en la alcantarilla", youtubeId: "eUscbH7EbeE", startSec: 40, endSec: 70 },
+      { id: "036", year: 2017, title: "Eso", director: "Andy Muschietti", lead: "Bill Skarsgård", genre: "Terror", scene: "Georgie conoce a Pennywise en la alcantarilla", youtubeId: "fYPjlNFvS_8", startSec: 40, endSec: 70 },
       { id: "037", year: 1976, title: "Rocky", director: "John G. Avildsen", lead: "Sylvester Stallone", genre: "Deportes", scene: "El entrenamiento y las escaleras de Filadelfia", youtubeId: "_YYmfM2TfUA", startSec: 37, endSec: 67 },
       { id: "038", year: 1994, title: "La máscara", director: "Chuck Russell", lead: "Jim Carrey", genre: "Comedia", scene: "\"¡Ssssmokin'!\": Stanley se pone la máscara", youtubeId: "csvOWBDx1oM", startSec: 29, endSec: 59 },
       { id: "039", year: 1990, title: "Mi pobre angelito", director: "Chris Columbus", lead: "Macaulay Culkin", genre: "Comedia", scene: "Las trampas de Kevin contra los ladrones", youtubeId: "ddXUQu9RC4U", startSec: 29, endSec: 59 },
@@ -1272,7 +1280,7 @@
       { id: "086", year: 1989, title: "Batman", director: "Tim Burton", lead: "Michael Keaton", genre: "Superhéroes", scene: "\"Puedes llamarme Guasón\"", youtubeId: "yPBPcACUTng", startSec: 22, endSec: 52 },
       { id: "087", year: 1973, title: "El exorcista", director: "William Friedkin", lead: "Linda Blair", genre: "Terror", scene: "La visita médica que se sale de control", youtubeId: "sZazSFEHfg8", startSec: 19, endSec: 49 },
       { id: "088", year: 1999, title: "El club de la pelea", director: "David Fincher", lead: "Brad Pitt", genre: "Suspenso", scene: "La primera regla del club de la pelea", youtubeId: "dC1yHLp9bWA", startSec: 30, endSec: 60 },
-      { id: "089", year: 1971, title: "La naranja mecánica", director: "Stanley Kubrick", lead: "Malcolm McDowell", genre: "Ciencia Ficción", scene: "Alex y sus drugos: la secuencia inicial", youtubeId: "tR6nk8PUTFI", startSec: 45, endSec: 75 },
+      { id: "089", year: 1971, title: "La naranja mecánica", director: "Stanley Kubrick", lead: "Malcolm McDowell", genre: "Ciencia Ficción", scene: "Alex pone en su lugar a sus drugos en la marina", youtubeId: "cSfcGXhcrrY", startSec: 18, endSec: 48 },
       { id: "090", year: 2023, title: "Super Mario Bros.: La película", director: "Aaron Horvath y Michael Jelenic", lead: "Chris Pratt", genre: "Animación", scene: "Mario y Luigi con la estrella de invencibilidad", youtubeId: "MCJIHAV8FrE", startSec: 31, endSec: 61 },
       { id: "091", year: 2023, title: "John Wick 4", director: "Chad Stahelski", lead: "Keanu Reeves", genre: "Acción", scene: "La pelea al ritmo de \"Paint It Black\"", youtubeId: "jUIZdspS32E", startSec: 30, endSec: 60 },
       { id: "092", year: 1979, title: "Alien: El octavo pasajero", director: "Ridley Scott", lead: "Sigourney Weaver", genre: "Terror", scene: "El alien aparece en la nave", youtubeId: "3YTIMGmZUr4", startSec: 29, endSec: 59 },
@@ -1289,7 +1297,7 @@
     /* =====================================================================
        2. ESTADO GLOBAL Y PERSISTENCIA EN LOCALSTORAGE
     ===================================================================== */
-    const BASE_DECK_VERSION = "2026-11-22.1";
+    const BASE_DECK_VERSION = "2026-11-22.2";
     const STORAGE_KEYS = {
       DECK: 'cinehit_deck_v1',
       DECK_VERSION: 'cinehit_deck_version',
@@ -1837,6 +1845,7 @@
       }
 
       pauseVideoSafely();
+      disableAdSkipMode();
       currentCard = found;
       isRevealed = false;
       usedCardIds.add(found.id);
@@ -2709,7 +2718,7 @@
       holder.innerHTML = '<div id="verify-player-mount"></div>';
       document.body.appendChild(holder);
 
-      let idx = -1, timer = null, settled = true, vPlayer = null;
+      let idx = -1, timer = null, okTimer = null, settled = true, vPlayer = null;
 
       const finish = () => {
         try { vPlayer.destroy(); } catch (e) {}
@@ -2718,7 +2727,7 @@
         window.cinehitVerifyDone = true;
         const bad = results.filter(r => !r.ok);
         if (bad.length === 0) {
-          statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ Los ${results.length} clips reproducen bien.</span>`;
+          statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ Los ${results.length} clips están disponibles.</span>`;
         } else {
           statusEl.innerHTML = `<span class="text-rose-300 font-bold">⚠️ ${bad.length} de ${results.length} clips fallaron:</span> ` +
             bad.map(r => `#${escapeHtml(r.id)} ${escapeHtml(r.title)} (${escapeHtml(REASONS[r.code] || ('código ' + r.code))})`).join(' · ');
@@ -2730,12 +2739,14 @@
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        clearTimeout(okTimer);
         const c = linked[idx];
         results.push({ id: c.id, title: c.title, youtubeId: c.youtubeId, ok, code });
-        try { vPlayer.stopVideo(); } catch (e) {}
-        setTimeout(next, 250);
+        setTimeout(next, 150);
       };
 
+      // Solo se "prepara" cada video (cue): YouTube avisa si está borrado o bloqueado
+      // sin reproducirlo, así no suena nada ni salen anuncios.
       const next = () => {
         idx++;
         if (idx >= linked.length) return finish();
@@ -2743,12 +2754,12 @@
         const c = linked[idx];
         statusEl.textContent = `Verificando clip ${idx + 1} de ${linked.length}…`;
         try {
-          vPlayer.loadVideoById({ videoId: c.youtubeId, startSeconds: Math.max(0, Number(c.startSec) || 0) });
+          vPlayer.cueVideoById({ videoId: c.youtubeId, startSeconds: Math.max(0, Number(c.startSec) || 0) });
         } catch (e) {
           settle(false, 'timeout');
           return;
         }
-        timer = setTimeout(() => settle(false, 'timeout'), 12000);
+        timer = setTimeout(() => settle(false, 'timeout'), 10000);
       };
 
       const playerVars = { controls: 0, rel: 0, playsinline: 1, mute: 1, fs: 0, iv_load_policy: 3 };
@@ -2758,16 +2769,34 @@
         height: '135',
         playerVars,
         events: {
-          onReady: () => { try { vPlayer.mute(); } catch (e) {} next(); },
+          onReady: () => next(),
           onStateChange: (ev) => {
-            if (ev.data !== YT.PlayerState.PLAYING || settled) return;
-            let vid = '';
-            try { vid = (vPlayer.getVideoData() || {}).video_id || ''; } catch (e) {}
-            if (!vid || vid === linked[idx].youtubeId) settle(true, 0);
+            if (ev.data !== YT.PlayerState.CUED || settled) return;
+            clearTimeout(okTimer);
+            okTimer = setTimeout(() => settle(true, 0), 1500);
           },
           onError: (ev) => settle(false, ev.data)
         }
       });
+    }
+
+    /* =====================================================================
+       9.c MODO ANUNCIO: abre el escudo unos segundos para tocar "Saltar"
+    ===================================================================== */
+    let adSkipTimer = null;
+    function enableAdSkipMode() {
+      document.getElementById('cinema-viewport').classList.add('ad-mode');
+      document.getElementById('label-ad-skip').textContent = 'Toca "Saltar" en el video';
+      showToast('Escudo abierto 12 segundos: toca "Saltar anuncio" dentro del video.', 'info');
+      clearTimeout(adSkipTimer);
+      adSkipTimer = setTimeout(disableAdSkipMode, 12000);
+    }
+    function disableAdSkipMode() {
+      clearTimeout(adSkipTimer);
+      const vp = document.getElementById('cinema-viewport');
+      if (vp) vp.classList.remove('ad-mode');
+      const lbl = document.getElementById('label-ad-skip');
+      if (lbl) lbl.textContent = '¿Anuncio?';
     }
 
     /* =====================================================================
