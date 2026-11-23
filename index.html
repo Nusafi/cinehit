@@ -153,6 +153,20 @@
       padding: 0 1.25rem;
       border-top: 1px solid rgba(245, 183, 49, 0.14);
     }
+    .curtain-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 22;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 76px 20px 60px;
+      background: radial-gradient(circle at 50% 35%, #1B2134 0%, #07080C 78%);
+    }
+    .curtain-overlay.is-open { display: flex; }
+    .cinema-viewport.ad-mode .curtain-overlay { display: none !important; }
     .cinema-viewport.ad-mode .anti-spoiler-shield,
     .cinema-viewport.ad-mode .letterbox-bottom,
     .cinema-viewport.ad-mode #audio-only-overlay { display: none !important; }
@@ -454,6 +468,13 @@
 
                 <!-- 2. Escudo transparente que bloquea clics y hover sobre el iframe -->
                 <div id="anti-spoiler-shield" class="anti-spoiler-shield hidden"></div>
+
+                <!-- 2.b Telón: oculta miniatura, pausa y sugerencias de YouTube -->
+                <div id="curtain-overlay" class="curtain-overlay">
+                  <div style="font-size:40px; line-height:1;">🎬</div>
+                  <p id="curtain-title" class="font-display text-3xl tracking-widest text-gold mt-3">CLIP LISTO</p>
+                  <p id="curtain-sub" class="text-xs sm:text-sm text-slate-300 mt-1 max-w-xs">Pulsa Reproducir</p>
+                </div>
 
                 <!-- 3. Barras Letterbox Físicas Anti-Spoiler (68px arriba / 52px abajo) -->
                 <div id="letterbox-top" class="letterbox-top hidden">
@@ -1687,16 +1708,21 @@
       const state = event.data;
       if (state === YT.PlayerState.PLAYING) {
         isPlaying = true;
+        fragmentEnded = false;
         updatePlayUiState(true);
         startProgressPolling();
       } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED) {
         isPlaying = false;
         updatePlayUiState(false);
         stopProgressPolling();
+        if (state === YT.PlayerState.CUED) setCurtain(true, 'CLIP LISTO', 'Pulsa Reproducir');
+        else if (fragmentEnded) setCurtain(true, 'FIN DEL FRAGMENTO', '¡Hora de decidir! Coloca tu tarjeta en la línea de tiempo.');
+        else setCurtain(true, 'CLIP EN PAUSA', 'Pulsa Reproducir para continuar');
       } else if (state === YT.PlayerState.ENDED) {
         isPlaying = false;
         updatePlayUiState(false);
         stopProgressPolling();
+        setCurtain(true, 'CLIP FINALIZADO', 'Repite el clip o revela la respuesta.');
         setStageStatus('Clip finalizado — Repite o Revela', 'gold');
       }
     }
@@ -1716,6 +1742,7 @@
       }
       document.getElementById('embed-error-msg').textContent = msg;
       document.getElementById('embed-error-overlay').classList.remove('hidden');
+      setCurtain(false);
       setStageStatus('Error de YouTube (' + code + ')', 'error');
     }
 
@@ -1776,6 +1803,8 @@
             updatePlayUiState(false);
             stopProgressPolling();
             updateProgressDisplay(duration, duration, start, end);
+            fragmentEnded = true;
+            setCurtain(true, 'FIN DEL FRAGMENTO', '¡Hora de decidir! Coloca tu tarjeta en la línea de tiempo.');
             setStageStatus('Fin del fragmento — ¡Hora de decidir!', 'gold');
           }
         } catch (e) {}
@@ -1805,7 +1834,18 @@
       document.getElementById('letterbox-time-readout').textContent = `${formatMMSS(elapsed)} / ${formatMMSS(duration)}`;
     }
 
+    let fragmentEnded = false;
+    function setCurtain(open, title, sub) {
+      const el = document.getElementById('curtain-overlay');
+      if (!el) return;
+      const show = Boolean(open && currentCard && currentCard.youtubeId);
+      el.classList.toggle('is-open', show);
+      if (title) document.getElementById('curtain-title').textContent = title;
+      if (sub) document.getElementById('curtain-sub').textContent = sub;
+    }
+
     function updatePlayUiState(playing) {
+      setCurtain(!playing);
       document.getElementById('icon-play').classList.toggle('hidden', playing);
       document.getElementById('icon-pause').classList.toggle('hidden', !playing);
       document.getElementById('label-play-pause').textContent = playing ? 'Pausar' : 'Reproducir';
@@ -1890,6 +1930,8 @@
         controlsBox.classList.remove('opacity-50', 'pointer-events-none');
         applyPlayModeOverlay();
 
+        fragmentEnded = false;
+        setCurtain(true, 'CLIP LISTO', 'Pulsa Reproducir');
         setStageStatus('Clip listo — Pulsa Reproducir', 'gold');
         cueVideoForCard(found, autoplay);
       } else {
@@ -1901,6 +1943,7 @@
         document.getElementById('audio-only-overlay').classList.add('hidden');
         document.getElementById('no-clip-overlay').classList.remove('hidden');
         controlsBox.classList.add('opacity-50', 'pointer-events-none');
+        setCurtain(false);
         setStageStatus('Sin clip vinculado', 'neutral');
       }
 
@@ -1989,6 +2032,8 @@
           if (now >= end - 0.5 || now < start - 1) {
             ytPlayer.seekTo(start, true);
           }
+          fragmentEnded = false;
+          setCurtain(true, 'CARGANDO CLIP…', 'Si escuchas un anuncio, toca «¿Anuncio?» para saltarlo.');
           ytPlayer.playVideo();
         }
       } catch (e) {
@@ -2000,6 +2045,8 @@
       if (!currentCard || !currentCard.youtubeId || !ytPlayer || !ytPlayerReady) return;
       const start = Math.max(0, Number(currentCard.startSec) || 0);
       try {
+        fragmentEnded = false;
+        setCurtain(true, 'CARGANDO CLIP…', 'Si escuchas un anuncio, toca «¿Anuncio?» para saltarlo.');
         ytPlayer.seekTo(start, true);
         ytPlayer.playVideo();
       } catch (e) {}
